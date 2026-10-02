@@ -1,0 +1,7 @@
+{
+  "id": "history_doodle_v1",
+  "name": "HISTORY DOODLE",
+  "locked": true,
+  "palette": ["parchment", "cream", "charcoal", "leather brown", "rust red", "muted ochre", "desaturated blue", "olive green"],
+  "rules": ["single coherent 16:9 illustration", "no embedded text", "no collage", "adult educational humor", "adult human body proportions", "head approximately one fifth of total body height", "restrained expressions", "no chibi proportions", "no children's book aesthetic", "clear silhouettes", "medium-low detail"]
+}
