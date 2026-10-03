@@ -1,14 +1,21 @@
 from pathlib import Path
 from PIL import Image
-from history_doodle.render import _motion_filter, probe, render
+from history_doodle.render import _motion_filter, _xfade_graph, probe, render
 from history_doodle.schemas import ProjectPlan, Scene, Shot, StorySection
 from history_doodle.subtitles import build
 from history_doodle.schemas import WordStamp
 from history_doodle.util import run
 
-def test_pan_filters_use_crop_frame_counter():
-    assert "1-n/" in _motion_filter("pan_left",120)
-    assert "96*n/" in _motion_filter("pan_right",120)
+def test_motion_is_subtle_and_pans_are_locked():
+    assert "1.015" in _motion_filter("slow_zoom_in", 120)
+    assert "zoompan" not in _motion_filter("pan_left", 120)
+    assert "zoompan" not in _motion_filter("pan_right", 120)
+
+def test_crossfade_graph_uses_scene_boundaries():
+    graph, output = _xfade_graph([3.0, 4.0, 5.0])
+    assert "duration=0.32:offset=3.000000" in graph
+    assert "duration=0.32:offset=7.000000" in graph
+    assert output == "v2"
 
 def test_real_ffmpeg_render(tmp_path):
     for rel in ("images","audio","subtitles","render/temp"):(tmp_path/rel).mkdir(parents=True,exist_ok=True)
