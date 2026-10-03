@@ -13,6 +13,100 @@ log = logging.getLogger(__name__)
 def target_words(seconds: int, wpm: int = 158) -> int:
     return round(seconds * wpm / 60)
 
+TAG_RE = re.compile(r"^\s*\[(VISUAL|CHARACTER|OBJECTS|LABELS|BACKGROUND|COMPOSITION)\s*:\s*([^]]+)\]\s*$|^\s*\[(NO PEOPLE)\]\s*$", re.I)
+VISUAL_ALIASES={"CHARACTER":"CHARACTER_MEDIUM","CLOSEUP":"CHARACTER_CLOSEUP","OBJECT":"OBJECT_HERO","OBJECT_COLLECTION":"OBJECT_COLLECTION","DETAIL":"DETAIL","ENVIRONMENT":"ENVIRONMENT","INFO":"INFO_CARD","MAP":"MAP","COMPARISON":"COMPARISON"}
+
+def parse_director_tags(script: str) -> tuple[str,list[dict]]:
+    """Remove optional direction lines from spoken text and retain their cue."""
+    spoken=[]; overrides=[]; current=None
+    for line in script.splitlines():
+        match=TAG_RE.match(line)
+        if match:
+            if current is None:
+                cue=(spoken[-1] if spoken else "").strip(); current={"cue":cue}
+                overrides.append(current)
+            key=(match.group(1) or match.group(3)).upper(); value=(match.group(2) or "true").strip()
+            current[key]=value
+        else:
+            if line.strip(): spoken.append(line)
+            current=None
+    return "\n".join(spoken).strip(),overrides
+
+def strip_director_tags(script: str) -> str:
+    return parse_director_tags(script)[0]
+
+def _auto_visual_type(text: str) -> str:
+    low=text.lower()
+    if re.search(r"\b(?:he|she|farmer|worker)\b.*\b(?:carried|walked|fed|woke|entered|left|returned)\b",low): return "CHARACTER_MEDIUM"
+    if any(x in low for x in ("route","map","connected","across the sea","distant regions")): return "MAP"
+    if any(x in low for x in ("compared","versus","rather than","less like","more like","then and now")): return "COMPARISON"
+    if re.search(r"\b\d+(?:[.,]\d+)?\s*(?:%|percent|years?|people|times?)\b",low) or any(x in low for x in ("statistics","timeline","three reasons","four reasons")): return "INFO_CARD"
+    object_words=[x for x in ("axe","sickle","knife","tools","coins","nails","rope","boots","bucket") if x in low]
+    if len(object_words)>=2 or ("several" in low and "tool" in low): return "OBJECT_COLLECTION"
+    if object_words: return "OBJECT_HERO"
+    if any(x in low for x in ("bowl","porridge","bread","fabric","fire","hearth","carved")): return "DETAIL"
+    if any(x in low for x in ("village","house","home","farm","field","fjord","workshop","street","ship","landscape")): return "ENVIRONMENT"
+    if any(x in low for x in ("felt","afraid","angry","worried","surprised","tired")): return "CHARACTER_CLOSEUP"
+    return "CHARACTER_MEDIUM"
+
+def apply_visual_grammar(plan: ProjectPlan, overrides: list[dict] | None=None) -> ProjectPlan:
+    object_types={"OBJECT_HERO","OBJECT_COLLECTION","ENVIRONMENT","INFO_CARD","MAP"}
+    ordered=sorted(plan.shots,key=lambda x:x.order); overrides=overrides or []
+    for shot in ordered:
+        shot.visual_type=_auto_visual_type(shot.narration_context or shot.visual_subject)
+        shot.director_override=False
+        for override in overrides:
+            cue=override.get("cue","")
+            if cue and (cue in shot.narration_context or SequenceMatcher(None,cue.lower(),shot.narration_context.lower()).ratio()>.55):
+                requested=VISUAL_ALIASES.get(override.get("VISUAL","").upper())
+                if requested: shot.visual_type=requested
+                if "OBJECTS" in override: shot.objects=[x.strip() for x in override["OBJECTS"].split("|") if x.strip()]
+                if "BACKGROUND" in override: shot.background_style=override["BACKGROUND"]
+                if "COMPOSITION" in override: shot.composition=override["COMPOSITION"]
+                if "CHARACTER" in override: shot.character_ids=[override["CHARACTER"]]
+                if "NO PEOPLE" in override: shot.people_count=0; shot.character_ids=[]
+                shot.director_override=True; break
+        if shot.visual_type in object_types:
+            shot.people_count=0; shot.character_ids=[]
+        elif shot.visual_type=="DETAIL":
+            shot.people_count=0; shot.character_ids=[]
+        elif shot.visual_type=="GROUP": shot.people_count=max(3,shot.people_count)
+        else: shot.people_count=max(1,min(2,shot.people_count))
+        if not shot.objects:
+            shot.objects=[x for x in ("axe","sickle","knife","coin","rope","bucket","porridge","bread") if x in (shot.narration_context or "").lower()][:5]
+        if shot.visual_type=="OBJECT_COLLECTION" and not shot.objects:
+            shot.objects=["the separate period objects explicitly named in the narration"]
+        if shot.visual_type=="OBJECT_COLLECTION":
+            shot.composition=shot.composition if shot.director_override and shot.composition else "two to five large period objects evenly spaced in one row, clean gaps between every object, no overlap"
+            shot.background_style=shot.background_style or "quiet nearly monochrome aged parchment field"
+        elif shot.visual_type=="OBJECT_HERO":
+            shot.composition=shot.composition if shot.director_override and shot.composition else "one large centered object filling most of the frame, readable silhouette"
+            shot.background_style=shot.background_style or "simple muted period-appropriate surface"
+        elif shot.visual_type=="DETAIL":
+            shot.composition=shot.composition if shot.director_override and shot.composition else "tight macro detail of material, tool, food, handcraft or architectural feature; no full human body"
+        elif shot.visual_type=="ENVIRONMENT":
+            shot.composition=shot.composition if shot.director_override and shot.composition else "wide empty establishing view with strong foreground, middle ground and background"
+        elif shot.visual_type=="MAP":
+            shot.composition=shot.composition if shot.director_override and shot.composition else "single stylized historical map with land, water and one clear route, no written labels"
+        elif shot.visual_type=="INFO_CARD":
+            shot.composition=shot.composition if shot.director_override and shot.composition else "simple visual infographic made from objects, marks and relative scale, no written words or numbers"
+        elif shot.visual_type=="COMPARISON":
+            shot.composition=shot.composition if shot.director_override and shot.composition else "two clearly separated subjects in one continuous scene, left and right, no dividing line"
+    for index in range(2,len(ordered)):
+        if ordered[index].visual_type==ordered[index-1].visual_type==ordered[index-2].visual_type and not ordered[index].director_override:
+            ordered[index].visual_type="DETAIL"
+            ordered[index].people_count=0; ordered[index].character_ids=[]
+    character_types={"CHARACTER_WIDE","CHARACTER_MEDIUM","CHARACTER_CLOSEUP","GROUP","SILHOUETTE"}
+    character_indices=[i for i,s in enumerate(ordered) if s.visual_type in character_types]
+    allowed=math.floor(len(ordered)*.70)
+    for i in character_indices[allowed:]:
+        shot=ordered[i]
+        if shot.director_override: continue
+        shot.visual_type="DETAIL" if i%2 else "ENVIRONMENT"
+        shot.people_count=0; shot.character_ids=[]
+        shot.composition="tight historically meaningful detail, no full human body" if shot.visual_type=="DETAIL" else "wide empty establishing view with layered depth"
+    return plan
+
 class LocalPlanner:
     def __init__(self, model_repo: str = LLM_REPO): self.model_repo = model_repo
 
@@ -38,12 +132,15 @@ class LocalPlanner:
         return re.sub(r"\s+", " ", result).strip()
 
     def plan(self, script: str, duration: int, base_seed: int) -> ProjectPlan:
+        script, director_overrides = parse_director_tags(script)
         style = STYLE_PROMPT.read_text().strip(); negative = NEGATIVE_PROMPT.read_text().strip()
         expected = max(5, round(duration / 6.7))
         schema = json.dumps(ProjectPlan.model_json_schema(), ensure_ascii=False)
-        system = "You are a precise visual director. Return only valid JSON matching the supplied schema. Never add markdown. Plan one coherent illustration per shot. Preserve the narration's exact chronological order: scene order 1 must cover the beginning and the final scene must cover the ending."
+        system = "You are a precise visual director. Return only valid JSON matching the supplied schema. Never add markdown. Plan one coherent illustration per shot. Preserve exact chronological order. Your job is not to place the recurring character in every shot. Choose the clearest visual grammar. Prefer objects, details, empty environments, maps and informational compositions whenever they communicate the idea better than a person. Use characters only when human action or emotion is central."
         scene_target = max(4, min(28, round(duration / 25)))
-        user = f"""Analyse the exact narration without rewriting it. Build story sections, about {scene_target} chronological scenes, recurring character cards, and 1-2 representative shot templates per scene. The application will safely expand these templates to about {expected} shots at 5-8 seconds each. Every scene narration_text must be an exact contiguous excerpt of the source narration. Each shot shows one literal, readable action with historically recognizable details. Alternate compositions among wide, medium-wide, medium, close detail, object shot, and environment shot. camera_motion must be one allowed enum. Prompt order must be locked style + character identity + era + location + action + composition + shot-specific content. Avoid collage and panels. Use this locked style at the beginning of every prompt:\n{style}\nUse this negative_prompt for every shot:\n{negative}\nSet initial seeds to zero; the application replaces them deterministically.\nSCHEMA:\n{schema}\nNARRATION:\n{script}"""
+        user = f"""Analyse the exact narration without rewriting it. Build story sections, about {scene_target} chronological scenes, recurring character cards, and 1-2 representative shot templates per scene. The application will safely expand these templates to about {expected} shots at 5-8 seconds each. Every scene narration_text must be an exact contiguous excerpt of the source narration. Each shot shows one literal, readable action with historically recognizable details. Alternate compositions among wide, medium-wide, medium, close detail, object shot, and environment shot. camera_motion must be one allowed enum. Prompt order must be locked style + character identity + era + location + action + composition + shot-specific content. Avoid collage and panels.
+Examples: several named tools -> OBJECT_COLLECTION, zero people; a person walking outside to feed animals -> CHARACTER_WIDE, one person; the center of a home is its hearth -> ENVIRONMENT, zero people; trade connects distant regions -> MAP, zero people; a tired farmer compared with a movie warrior -> CHARACTER_MEDIUM, one person.
+Use this locked style at the beginning of every prompt:\n{style}\nUse this negative_prompt for every shot:\n{negative}\nSet initial seeds to zero; the application replaces them deterministically.\nSCHEMA:\n{schema}\nNARRATION:\n{script}"""
         token_budget = min(8000, 2200 + scene_target * 220)
         raw = self._run(system, user, token_budget)
         error = ""
@@ -54,6 +151,7 @@ class LocalPlanner:
                 if any(scene.narration_text.strip() not in script for scene in plan.scenes):
                     raise ValueError("Every scene narration_text must be an exact contiguous excerpt from the source narration")
                 plan = normalize_shot_counts(plan, duration)
+                plan = apply_visual_grammar(plan, director_overrides)
                 return finalize_plan_prompts(plan, base_seed, style, negative)
             except (ValueError, ValidationError) as exc:
                 error = str(exc)
@@ -62,6 +160,7 @@ class LocalPlanner:
         log.warning("Qwen planning JSON invalid after repairs; using deterministic long-form fallback: %s", error)
         plan = _deterministic_fallback(script, duration)
         plan = normalize_shot_counts(plan, duration)
+        plan = apply_visual_grammar(plan, director_overrides)
         return finalize_plan_prompts(plan, base_seed, style, negative)
 
 def _deterministic_fallback(script: str, duration: int) -> ProjectPlan:
@@ -100,16 +199,37 @@ def _concrete_visual_beat(value: str) -> str:
     value = re.sub(r"[“”\"].*?[“”\"]", "", value)
     return value.strip(" ,;:-") or "one historically accurate everyday action from this narration beat"
 
-def finalize_plan_prompts(plan: ProjectPlan, base_seed: int, style: str | None = None, negative: str | None = None) -> ProjectPlan:
+def build_shot_prompt(shot: Shot, cards: dict[str, CharacterCard], style: str | None = None, negative: str | None = None) -> Shot:
     style = style or STYLE_PROMPT.read_text().strip(); negative = negative or NEGATIVE_PROMPT.read_text().strip()
+    identities = "; ".join("CHARACTER CARD: " + _safe_visual_phrase(cards[c].visual_identity) + "; FIXED: " + ", ".join(cards[c].fixed_traits) for c in shot.character_ids if c in cards) if shot.people_count else ""
+    props = ", ".join(_safe_visual_phrase(x) for x in shot.historical_props)
+    action = _concrete_visual_beat(shot.action); subject = _concrete_visual_beat(shot.visual_subject); composition = _safe_visual_phrase(shot.composition)
+    if shot.people_count==0:
+        named_objects=", ".join(shot.objects[:5]) or "the historically accurate objects explicitly named in the narration"
+        if shot.visual_type in {"OBJECT_HERO","OBJECT_COLLECTION"}:
+            action=f"objects only, display {named_objects} as a clean still life"
+            subject=f"only {named_objects}; empty scene"
+        elif shot.visual_type=="ENVIRONMENT":
+            action="empty location only, establish the historically accurate place"
+            subject="architecture, landscape and period objects only; empty scene"
+        elif shot.visual_type=="DETAIL":
+            action="one tight material or object detail only"
+            subject="historically meaningful close detail; no full body"
+    if shot.people_count==0: anatomy="NO PEOPLE: no people, no human figures, no hands, no body parts"
+    elif shot.people_count==1: anatomy="exactly one clearly separated adult human figure, simple readable pose, exactly two arms and two legs, anatomically separated limbs, hands visible only if necessary, no overlapping limbs"
+    elif shot.people_count==2: anatomy="exactly two clearly separated adult human figures with visible space between bodies, no merged limbs, no overlapping torsos, simple poses"
+    else: anatomy="distant simplified background silhouettes only, no interlocked bodies, no detailed hands"
+    object_rule = f"OBJECTS: {', '.join(shot.objects[:5])}; isolated large forms, evenly spaced, nothing overlaps" if shot.objects else ""
+    final_safety="OBJECTS AND SETTING ONLY; EMPTY OF ALL PEOPLE; do not draw a person, face, hand, arm, leg or human silhouette" if shot.people_count==0 else ""
+    shot.prompt = "; ".join(x for x in [style, f"VISUAL TYPE: {shot.visual_type}", anatomy, identities, object_rule, f"BACKGROUND: {_safe_visual_phrase(shot.background_style)}" if shot.background_style else "", f"ERA DESCRIPTION AND PROPS: {props}" if props else "ERA DESCRIPTION: historically accurate period details", f"LOCATION: {_safe_visual_phrase(shot.location)}", f"ACTION: {action}", f"COMPOSITION: {composition}", f"SHOT-SPECIFIC CONTENT: {subject}", final_safety, "silent visual moment with no depicted dialogue; no speech bubbles; single coherent 16:9 illustration; one clear foreground action; absolutely no writing anywhere; no letters, no numbers, no symbols, no logos; one continuous camera view; no panels, no divisions, no collage, no split screen"] if x)
+    shot.negative_prompt = negative; shot.status = "pending"; shot.prompt_hash = None
+    return shot
+
+def finalize_plan_prompts(plan: ProjectPlan, base_seed: int, style: str | None = None, negative: str | None = None) -> ProjectPlan:
     cards = {c.id: c for c in plan.characters}
     for i, shot in enumerate(sorted(plan.shots, key=lambda s: s.order)):
         shot.seed = shot_seed(base_seed, i)
-        identities = "; ".join("CHARACTER CARD: " + _safe_visual_phrase(cards[c].visual_identity) + "; FIXED: " + ", ".join(cards[c].fixed_traits) for c in shot.character_ids if c in cards)
-        props = ", ".join(_safe_visual_phrase(x) for x in shot.historical_props)
-        action = _concrete_visual_beat(shot.action); subject = _concrete_visual_beat(shot.visual_subject); composition = _safe_visual_phrase(shot.composition)
-        shot.prompt = "; ".join(x for x in [style, identities, f"ERA DESCRIPTION AND PROPS: {props}" if props else "ERA DESCRIPTION: historically accurate period details", f"LOCATION: {_safe_visual_phrase(shot.location)}", f"ACTION: {action}", f"COMPOSITION: {composition}", f"SHOT-SPECIFIC CONTENT: {subject}", "silent visual moment with no depicted dialogue; no speech bubbles; single coherent 16:9 illustration; one clear foreground action; absolutely no writing anywhere; no letters, no numbers, no symbols, no logos; clocks have no digits; device screens are blank; one continuous camera view; no panels, no divisions, no collage, no split screen"] if x)
-        shot.negative_prompt = negative; shot.status = "pending"; shot.prompt_hash = None
+        build_shot_prompt(shot, cards, style, negative)
     return plan
 
 def _repair_links(data: dict) -> dict:

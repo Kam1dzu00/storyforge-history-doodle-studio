@@ -8,6 +8,7 @@ from PySide6.QtWidgets import QApplication, QComboBox, QFileDialog, QFormLayout,
 from .config import DEFAULT_VOICE, LOGS_DIR, PROJECTS_DIR, STYLE_REFERENCE, VOICES, ensure_dirs
 from .health import check
 from .pipeline import Pipeline
+from .planner import build_shot_prompt
 from .storage import ProjectStore
 from .util import setup_logging
 
@@ -64,6 +65,7 @@ class Window(QMainWindow):
         self.grid=QListWidget(); self.grid.setViewMode(QListWidget.IconMode); self.grid.setIconSize(QSize(150,84)); self.grid.setResizeMode(QListWidget.Adjust); self.grid.setSpacing(8); self.grid.setMaximumHeight(245); self.grid.itemClicked.connect(self.show_grid_item); rv.addWidget(self.grid)
         self.preview=QLabel("Здесь появится выбранный сгенерированный кадр"); self.preview.setObjectName("preview"); self.preview.setAlignment(Qt.AlignCenter); self.preview.setMinimumHeight(230); self.preview.setWordWrap(True); rv.addWidget(self.preview)
         self.shot_meta=QLabel(""); self.shot_meta.setObjectName("muted"); self.shot_meta.setWordWrap(True); rv.addWidget(self.shot_meta)
+        self.visual_type=QComboBox(); self.visual_type.addItems(["CHARACTER_WIDE","CHARACTER_MEDIUM","CHARACTER_CLOSEUP","OBJECT_HERO","OBJECT_COLLECTION","DETAIL","ENVIRONMENT","INFO_CARD","MAP","COMPARISON","SILHOUETTE","GROUP"]); self.visual_type.currentTextChanged.connect(self.change_visual_type); rv.addWidget(self.visual_type)
         self.details=QTextEdit(); self.details.setPlaceholderText("Выберите сцену или кадр, чтобы посмотреть и изменить описание."); rv.addWidget(self.details,1)
         save=QPushButton("Сохранить описание кадра"); save.setObjectName("quiet"); save.clicked.connect(self.save_prompt); rv.addWidget(save)
         actions=QHBoxLayout(); same=QPushButton("Повторить точно"); same.setToolTip("Сгенерировать кадр повторно с тем же числом случайности"); same.setObjectName("quiet"); same.clicked.connect(lambda:self.regen(False)); regen=QPushButton("Новый вариант"); regen.clicked.connect(lambda:self.regen(True)); actions.addWidget(same); actions.addWidget(regen); rv.addLayout(actions)
@@ -165,12 +167,22 @@ class Window(QMainWindow):
             sh=next(x for x in plan.shots if x.id==ident); self.details.setPlainText(sh.prompt); self.current_shot=ident
             self.current_scene=sh.scene_id
             names={c.id:c.name for c in plan.characters}; people=", ".join(names.get(x,x) for x in sh.character_ids) or "нет"
-            self.shot_meta.setText(f"Персонажи: {people}  ·  Движение: {sh.camera_motion}  ·  Время: {sh.start_time or 0:.1f}–{sh.end_time or 0:.1f} сек.  ·  Seed: {sh.seed}")
+            self.shot_meta.setText(f"Тип: {sh.visual_type} · Людей: {sh.people_count} · Объекты: {', '.join(sh.objects) or 'нет'} · Персонажи: {people} · Движение: {sh.camera_motion} · Время: {sh.start_time or 0:.1f}–{sh.end_time or 0:.1f} сек. · Seed: {sh.seed}")
+            self.visual_type.blockSignals(True); self.visual_type.setCurrentText(sh.visual_type); self.visual_type.blockSignals(False)
             if sh.image_path:
                 pix=QPixmap(str(self.project/sh.image_path)); self.preview.setPixmap(pix.scaled(self.preview.size(),Qt.KeepAspectRatio,Qt.SmoothTransformation))
     def save_prompt(self):
         if not self.project or not getattr(self,"current_shot",None):return
         plan=self.store.load_plan(self.project); sh=next(x for x in plan.shots if x.id==self.current_shot); sh.prompt=self.details.toPlainText(); sh.status="stale"; self.store.save_plan(self.project,plan); self.refresh_tree()
+    def change_visual_type(self,value):
+        if not self.project or not getattr(self,"current_shot",None): return
+        plan=self.store.load_plan(self.project); sh=next(x for x in plan.shots if x.id==self.current_shot); sh.visual_type=value; sh.director_override=True
+        no_people=value in {"OBJECT_HERO","OBJECT_COLLECTION","DETAIL","ENVIRONMENT","INFO_CARD","MAP"}
+        sh.people_count=0 if no_people else max(1,sh.people_count)
+        if no_people: sh.character_ids=[]
+        elif not sh.character_ids and plan.characters: sh.character_ids=[plan.characters[0].id]
+        build_shot_prompt(sh,{c.id:c for c in plan.characters}); sh.status="stale"; sh.prompt_hash=None
+        self.store.save_plan(self.project,plan); state=self.store.load_state(self.project); state.images_status="stale"; state.render_status="stale"; self.store.save_state(self.project,state); self.details.setPlainText(sh.prompt); self.refresh_tree()
     def regen(self,new_seed=True):
         if getattr(self,"current_shot",None): self.run_custom(lambda:Pipeline(self.project,lambda m:self.worker.progress.emit(m)).generate_images(self.current_shot,new_seed))
     def open_image(self):

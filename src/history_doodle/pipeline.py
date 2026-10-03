@@ -5,7 +5,7 @@ from copy import deepcopy
 from pathlib import Path
 from .audio import TimestampEngine, VoiceEngine, audio_duration, quality_report
 from .config import DEFAULT_VOICE, ROOT, ensure_dirs
-from .planner import LocalPlanner
+from .planner import LocalPlanner, strip_director_tags
 from .render import render
 from .schemas import ProjectState, WordStamp
 from .storage import ProjectStore
@@ -48,7 +48,7 @@ class Pipeline:
 
     def generate_voice(self):
         self._check_cancel()
-        script = (self.project/"script.txt").read_text(encoding="utf-8"); self.event("Создаю английскую озвучку…")
+        script = strip_director_tags((self.project/"script.txt").read_text(encoding="utf-8")); self.event("Создаю английскую озвучку…")
         started=time.time()
         wav = VoiceEngine().generate(script, self.project/"audio", self.state.voice, lambda i,n:self.event(f"Озвучиваю фрагмент {i} из {n}…"))
         self.metrics["voice_generation_seconds"]=round(time.time()-started,2)

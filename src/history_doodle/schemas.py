@@ -5,6 +5,7 @@ from typing import Literal
 from pydantic import BaseModel, Field, model_validator
 
 Motion = Literal["slow_zoom_in", "slow_zoom_out", "pan_left", "pan_right", "subtle_push", "static"]
+VisualType = Literal["CHARACTER_WIDE", "CHARACTER_MEDIUM", "CHARACTER_CLOSEUP", "OBJECT_HERO", "OBJECT_COLLECTION", "DETAIL", "ENVIRONMENT", "INFO_CARD", "MAP", "COMPARISON", "SILHOUETTE", "GROUP"]
 
 class CharacterCard(BaseModel):
     id: str
@@ -34,6 +35,12 @@ class Shot(BaseModel):
     image_path: str | None = None
     prompt_hash: str | None = None
     status: Literal["pending", "stale", "generating", "complete", "failed"] = "pending"
+    visual_type: VisualType = "CHARACTER_MEDIUM"
+    people_count: int = Field(default=1, ge=0, le=20)
+    objects: list[str] = Field(default_factory=list)
+    labels: list[str] = Field(default_factory=list)
+    background_style: str = ""
+    director_override: bool = False
 
 class Scene(BaseModel):
     id: str

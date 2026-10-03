@@ -1,7 +1,7 @@
 from pathlib import Path
 import json
 import pytest
-from history_doodle.planner import target_words, finalize_plan_prompts, normalize_shot_counts
+from history_doodle.planner import target_words, finalize_plan_prompts, normalize_shot_counts, parse_director_tags, apply_visual_grammar
 from history_doodle.render import ffmpeg_available, render
 from history_doodle.schemas import CharacterCard, ProjectPlan, Scene, Shot, StorySection, WordStamp
 from history_doodle.storage import ProjectStore
@@ -60,3 +60,48 @@ def test_cancel_flag_is_resumable(tmp_path):
     pipe=Pipeline(project); pipe.cancel()
     with pytest.raises(RuntimeError,match="отменена"): pipe._check_cancel()
     assert store.load_state(project).script_status=="pending"
+
+def test_director_tags_are_not_narrated():
+    raw="Tools were essential.\n[VISUAL: OBJECT_COLLECTION]\n[OBJECTS: axe | sickle | knife]\n[NO PEOPLE]\nThey worked every day."
+    spoken,tags=parse_director_tags(raw)
+    assert "[" not in spoken and spoken=="Tools were essential.\nThey worked every day."
+    assert tags[0]["VISUAL"]=="OBJECT_COLLECTION" and tags[0]["NO PEOPLE"]=="true"
+
+def test_manual_object_override_removes_character_card():
+    plan=sample_plan(1); plan.shots[0].narration_context="Tools were essential."
+    plan.characters=[CharacterCard(id="hero",name="Hero",role="main",visual_identity="adult farmer")]; plan.shots[0].character_ids=["hero"]
+    plan=apply_visual_grammar(plan,[{"cue":"Tools were essential.","VISUAL":"OBJECT_COLLECTION","OBJECTS":"axe | sickle | knife","NO PEOPLE":"true"}])
+    out=finalize_plan_prompts(plan,42,"STYLE","NEG")
+    assert out.shots[0].visual_type=="OBJECT_COLLECTION" and out.shots[0].people_count==0
+    assert out.shots[0].objects==["axe","sickle","knife"] and "CHARACTER CARD" not in out.shots[0].prompt and "NO PEOPLE" in out.shots[0].prompt
+
+def test_visual_diversity_breaks_three_identical_types():
+    plan=sample_plan(3)
+    for shot in plan.shots: shot.narration_context="He walked to work."
+    plan=apply_visual_grammar(plan)
+    assert not (plan.shots[0].visual_type==plan.shots[1].visual_type==plan.shots[2].visual_type)
+
+def test_old_manifest_gets_visual_defaults():
+    data=sample_plan(1).model_dump(); shot=data["shots"][0]
+    for key in ("visual_type","people_count","objects","labels","background_style","director_override"): shot.pop(key)
+    loaded=ProjectPlan.model_validate(data).shots[0]
+    assert loaded.visual_type=="CHARACTER_MEDIUM" and loaded.people_count==1
+
+def test_labels_metadata_roundtrip_without_image_text():
+    plan=sample_plan(1); plan.shots[0].labels=["Axe","Sickle"]
+    assert ProjectPlan.model_validate(plan.model_dump()).shots[0].labels==["Axe","Sickle"]
+
+def test_anatomy_safety_is_added_to_human_prompt():
+    plan=sample_plan(1); plan.shots[0].people_count=1
+    out=finalize_plan_prompts(plan,42,"STYLE","NEG")
+    assert "exactly two arms and two legs" in out.shots[0].prompt
+    assert "no overlapping limbs" in out.shots[0].prompt
+
+def test_viking_tools_script_has_varied_object_first_grammar():
+    lines=["A Viking farmer used several simple tools.","An axe helped split wood.","A sickle cut grain.","A knife handled dozens of small daily tasks.","His house centered around a warm hearth.","Outside, the farm stretched toward the fjord.","At the end of the day, he carried a bucket back to the house."]
+    plan=sample_plan(len(lines))
+    for shot,line in zip(plan.shots,lines): shot.narration_context=shot.visual_subject=line
+    plan=apply_visual_grammar(plan)
+    types=[x.visual_type for x in plan.shots]
+    assert sum(x.startswith("CHARACTER") for x in types)<4
+    assert "OBJECT_COLLECTION" in types and "ENVIRONMENT" in types
