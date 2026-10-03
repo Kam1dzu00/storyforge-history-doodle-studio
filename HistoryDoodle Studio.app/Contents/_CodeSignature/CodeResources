@@ -8,6 +8,10 @@
 		<data>
 		OII6VSiIlzCgEuyYAh8BDOhjOZE=
 		</data>
+		<key>Resources/HistoryDoodle.icns</key>
+		<data>
+		7quBGYKsQQGh1cHO3Ri4LUMP+n8=
+		</data>
 		<key>Resources/Scripts/main.scpt</key>
 		<data>
 		RfswRONnqPAYBbqL0gM6LPkpipY=
@@ -32,6 +36,17 @@
 			<key>hash2</key>
 			<data>
 			Rpn0xOzw5hIlzilJOWf2MXLppK/3HeT4Aw1ScEqI+Z4=
+			</data>
+		</dict>
+		<key>Resources/HistoryDoodle.icns</key>
+		<dict>
+			<key>hash</key>
+			<data>
+			7quBGYKsQQGh1cHO3Ri4LUMP+n8=
+			</data>
+			<key>hash2</key>
+			<data>
+			eFqDIO+Iw5dZXniurdCT+/kVFALvJDcu+A2bZ3WUXAw=
 			</data>
 		</dict>
 		<key>Resources/Scripts/main.scpt</key>

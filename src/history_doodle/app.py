@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging, os, shutil, sys, time
 from pathlib import Path
 from PySide6.QtCore import QObject, QThread, Signal, Qt, QUrl, QTimer
-from PySide6.QtGui import QDesktopServices, QPixmap
+from PySide6.QtGui import QDesktopServices, QIcon, QPixmap
 from PySide6.QtWidgets import QApplication, QComboBox, QFileDialog, QFormLayout, QFrame, QHBoxLayout, QLabel, QLineEdit, QListWidget, QListWidgetItem, QMainWindow, QMessageBox, QProgressBar, QPushButton, QScrollArea, QSpinBox, QSplitter, QTabWidget, QTextEdit, QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget
 from .config import DEFAULT_VOICE, LOGS_DIR, PROJECTS_DIR, STYLE_REFERENCE, VOICES, ensure_dirs
 from .health import check
@@ -169,6 +169,11 @@ class Window(QMainWindow):
             STYLE_REFERENCE.parent.mkdir(parents=True,exist_ok=True); shutil.copy2(p,STYLE_REFERENCE); QMessageBox.information(self,"Стиль канала","Референс заменён. Он будет направлять будущие генерации, а зафиксированный текстовый стиль останется неизменным.")
 
 def main():
-    ensure_dirs(); setup_logging(LOGS_DIR/"app.log"); app=QApplication(sys.argv); app.setApplicationName("History Doodle Studio"); w=Window(); w.show(); sys.exit(app.exec())
+    ensure_dirs(); setup_logging(LOGS_DIR/"app.log"); app=QApplication(sys.argv)
+    app.setApplicationName("History Doodle Studio")
+    app.setApplicationDisplayName("History Doodle Studio")
+    icon = Path(__file__).resolve().parents[2] / "assets" / "app_icon.png"
+    if icon.exists(): app.setWindowIcon(QIcon(str(icon)))
+    w=Window(); w.setWindowIcon(app.windowIcon()); w.show(); w.raise_(); w.activateWindow(); sys.exit(app.exec())
 
 if __name__=="__main__":main()
