@@ -97,3 +97,8 @@ class WordStamp(BaseModel):
     end: float
     probability: float | None = None
 
+    @model_validator(mode="after")
+    def valid_range(self):
+        if self.start < 0 or self.end < self.start:
+            raise ValueError("Invalid word timestamp range")
+        return self

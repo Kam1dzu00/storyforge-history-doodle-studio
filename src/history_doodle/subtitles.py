@@ -3,10 +3,11 @@ from __future__ import annotations
 from pathlib import Path
 from .schemas import WordStamp
 
-def chunks(words: list[WordStamp], max_words: int = 5) -> list[list[WordStamp]]:
+def chunks(words: list[WordStamp], max_words: int = 5, max_chars: int = 34) -> list[list[WordStamp]]:
     result, current = [], []
     for word in words:
-        if current and (len(current) >= max_words or word.start - current[-1].end > .35):
+        projected = " ".join(x.word.strip() for x in current + [word])
+        if current and (len(current) >= max_words or len(projected) > max_chars or word.start - current[-1].end > .35):
             result.append(current); current = []
         current.append(word)
         if len(current) >= 2 and word.word.rstrip().endswith((".", "!", "?", ",", ";", ":")):
@@ -32,7 +33,7 @@ PlayResY: 1080
 WrapStyle: 2
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Doodle,Avenir Next,68,&H00FFFFFF,&H0000D9F2,&H00181818,&H70000000,-1,0,0,0,100,100,0,0,1,6,3,2,110,110,105,1
+Style: Doodle,Avenir Next,68,&H00FFFFFF,&H0028B4D8,&H00181818,&H70000000,-1,0,0,0,100,100,0,0,1,6,2,2,130,130,118,1
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 """
@@ -42,4 +43,3 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         effect = "{\\fscx95\\fscy95\\t(0,80,\\fscx103\\fscy103)\\t(80,160,\\fscx100\\fscy100)}"
         lines.append(f"Dialogue: 0,{stamp(group[0].start,True)},{stamp(group[-1].end,True)},Doodle,,0,0,0,,{effect}{karaoke}\n")
     ass.write_text("".join(lines), encoding="utf-8"); return srt, ass
-

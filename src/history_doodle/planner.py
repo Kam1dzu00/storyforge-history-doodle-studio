@@ -5,7 +5,7 @@ from difflib import SequenceMatcher
 from pathlib import Path
 from pydantic import ValidationError
 from .config import LLM_REPO, NEGATIVE_PROMPT, STYLE_PROMPT
-from .schemas import ProjectPlan
+from .schemas import CharacterCard, ProjectPlan, Scene, Shot, StorySection
 from .util import cleanup_models, json_from_model_text, shot_seed
 
 log = logging.getLogger(__name__)
@@ -39,11 +39,12 @@ class LocalPlanner:
 
     def plan(self, script: str, duration: int, base_seed: int) -> ProjectPlan:
         style = STYLE_PROMPT.read_text().strip(); negative = NEGATIVE_PROMPT.read_text().strip()
-        expected = max(5, round(duration / 7))
+        expected = max(5, round(duration / 6.7))
         schema = json.dumps(ProjectPlan.model_json_schema(), ensure_ascii=False)
         system = "You are a precise visual director. Return only valid JSON matching the supplied schema. Never add markdown. Plan one coherent illustration per shot. Preserve the narration's exact chronological order: scene order 1 must cover the beginning and the final scene must cover the ending."
-        user = f"""Analyse the exact narration without rewriting it. Build story sections, scenes, recurring character cards, and about {expected} shots. Each shot lasts 3-10 seconds, target 6-8. Every scene narration_text must be an exact contiguous excerpt of the source narration. Use concrete readable actions and historically recognizable details. camera_motion must be one allowed enum. Prompt must follow: locked style + character identity + exact subject/location/action/composition/era props + 'single coherent 16:9 illustration, no text'. Avoid collage and panels. Use this locked style at the beginning of every prompt:\n{style}\nUse this negative_prompt for every shot:\n{negative}\nSet placeholder seeds to zero; they will be replaced deterministically.\nSCHEMA:\n{schema}\nNARRATION:\n{script}"""
-        token_budget = min(8000, 1800 + expected * 600)
+        scene_target = max(4, min(28, round(duration / 25)))
+        user = f"""Analyse the exact narration without rewriting it. Build story sections, about {scene_target} chronological scenes, recurring character cards, and 1-2 representative shot templates per scene. The application will safely expand these templates to about {expected} shots at 5-8 seconds each. Every scene narration_text must be an exact contiguous excerpt of the source narration. Each shot shows one literal, readable action with historically recognizable details. Alternate compositions among wide, medium-wide, medium, close detail, object shot, and environment shot. camera_motion must be one allowed enum. Prompt order must be locked style + character identity + era + location + action + composition + shot-specific content. Avoid collage and panels. Use this locked style at the beginning of every prompt:\n{style}\nUse this negative_prompt for every shot:\n{negative}\nSet initial seeds to zero; the application replaces them deterministically.\nSCHEMA:\n{schema}\nNARRATION:\n{script}"""
+        token_budget = min(8000, 2200 + scene_target * 220)
         raw = self._run(system, user, token_budget)
         error = ""
         for attempt in range(3):
@@ -56,9 +57,34 @@ class LocalPlanner:
                 return finalize_plan_prompts(plan, base_seed, style, negative)
             except (ValueError, ValidationError) as exc:
                 error = str(exc)
-                if attempt == 2: break
+                if attempt == 2 or (duration >= 300 and attempt == 0): break
                 raw = self._run("Repair JSON. Return only a complete valid JSON object matching the schema; preserve semantic content.", f"SCHEMA:\n{schema}\nERROR:\n{error}\nBROKEN OUTPUT:\n{raw}", token_budget)
-        raise RuntimeError(f"Planning JSON remained invalid after two repairs: {error}")
+        log.warning("Qwen planning JSON invalid after repairs; using deterministic long-form fallback: %s", error)
+        plan = _deterministic_fallback(script, duration)
+        plan = normalize_shot_counts(plan, duration)
+        return finalize_plan_prompts(plan, base_seed, style, negative)
+
+def _deterministic_fallback(script: str, duration: int) -> ProjectPlan:
+    protected = re.sub(r"\b([ap])\.m\.", lambda m: f"{m.group(1)}<DOT>m<DOT>", script, flags=re.I)
+    sentences = [x.replace("<DOT>", ".").strip() for x in re.split(r"(?<=[.!?])\s+", protected) if x.strip()]
+    scene_count = max(4, min(len(sentences), round(duration / 25)))
+    groups=[]; cursor=0
+    for index in range(scene_count):
+        remaining=len(sentences)-cursor; take=remaining if index==scene_count-1 else max(1, round(remaining/(scene_count-index)))
+        groups.append(" ".join(sentences[cursor:cursor+take])); cursor+=take
+    character=CharacterCard(
+        id="recurring_adult", name="Recurring adult protagonist", role="visual anchor",
+        visual_identity=("the same adult man about thirty-five years old, lean average-height body, "
+                         "narrow oval face, brown eyes, shoulder-length chestnut hair tied low, short brown stubble, "
+                         "wearing a muted olive period-appropriate working garment, dark brown trousers, leather belt and brown boots"),
+        fixed_traits=["same narrow oval face", "same chestnut tied-back hair", "same short brown stubble", "same olive and dark-brown clothing palette", "natural adult proportions"],
+    )
+    scenes=[]; shots=[]
+    for i,text in enumerate(groups,1):
+        sid=f"scene_{i:03d}"; shid=f"shot_{i:03d}"
+        scenes.append(Scene(id=sid,section_id="section_001",order=i,narration_text=text,shot_ids=[shid]))
+        shots.append(Shot(id=shid,scene_id=sid,order=i,narration_context=text,visual_subject=text,location="the single historically appropriate location explicitly implied by this narration beat; never a modern setting",action="show one literal action from this narration beat",historical_props=["strictly period-appropriate everyday clothing", "historically recognizable tools and architecture from the era and culture named in the narration", "no modern clothing or objects"],character_ids=[character.id],composition="wide establishing shot",camera_motion="static",prompt="",negative_prompt="",seed=0,estimated_duration=7))
+    return ProjectPlan(sections=[StorySection(id="section_001",title="Chronological story",purpose="Preserve exact narration order",scene_ids=[x.id for x in scenes])],scenes=scenes,shots=shots,characters=[character])
 
 def _safe_visual_phrase(value: str) -> str:
     value = re.sub(r"['\"]?\d{1,2}(?::\d{2})?\s*(?:a\.?m\.?|p\.?m\.?)?['\"]?", "", value, flags=re.I)
@@ -67,15 +93,22 @@ def _safe_visual_phrase(value: str) -> str:
     value = re.sub(r"\s+", " ", value).strip(" ,;:-")
     return value
 
+def _concrete_visual_beat(value: str) -> str:
+    """Keep narration semantics while removing clauses that invite drawn dialogue/text."""
+    value = _safe_visual_phrase(value)
+    value = re.split(r"\b(?:and the (?:guild|law|rule)|the rule (?:is|was)|which means|in other words|according to|as they say)\b", value, maxsplit=1, flags=re.I)[0]
+    value = re.sub(r"[“”\"].*?[“”\"]", "", value)
+    return value.strip(" ,;:-") or "one historically accurate everyday action from this narration beat"
+
 def finalize_plan_prompts(plan: ProjectPlan, base_seed: int, style: str | None = None, negative: str | None = None) -> ProjectPlan:
     style = style or STYLE_PROMPT.read_text().strip(); negative = negative or NEGATIVE_PROMPT.read_text().strip()
     cards = {c.id: c for c in plan.characters}
     for i, shot in enumerate(sorted(plan.shots, key=lambda s: s.order)):
         shot.seed = shot_seed(base_seed, i)
-        identities = "; ".join(_safe_visual_phrase(cards[c].visual_identity) + "; fixed traits: " + ", ".join(cards[c].fixed_traits) for c in shot.character_ids if c in cards)
+        identities = "; ".join("CHARACTER CARD: " + _safe_visual_phrase(cards[c].visual_identity) + "; FIXED: " + ", ".join(cards[c].fixed_traits) for c in shot.character_ids if c in cards)
         props = ", ".join(_safe_visual_phrase(x) for x in shot.historical_props)
-        action = _safe_visual_phrase(shot.action); subject = _safe_visual_phrase(shot.visual_subject); composition = _safe_visual_phrase(shot.composition)
-        shot.prompt = "; ".join(x for x in [style, identities, f"Subject: {subject}", f"Location: {shot.location}", f"Action: {action}", f"Composition: {composition}", f"Era-specific clothing and props: {props}" if props else "", "single coherent 16:9 illustration; absolutely no writing anywhere; no letters, no numbers, no symbols, no logos; clocks have no digits; every device screen is featureless black glass or abstract color blocks; one continuous camera view; no panels, no divisions, no collage, no split screen"] if x)
+        action = _concrete_visual_beat(shot.action); subject = _concrete_visual_beat(shot.visual_subject); composition = _safe_visual_phrase(shot.composition)
+        shot.prompt = "; ".join(x for x in [style, identities, f"ERA DESCRIPTION AND PROPS: {props}" if props else "ERA DESCRIPTION: historically accurate period details", f"LOCATION: {_safe_visual_phrase(shot.location)}", f"ACTION: {action}", f"COMPOSITION: {composition}", f"SHOT-SPECIFIC CONTENT: {subject}", "silent visual moment with no depicted dialogue; no speech bubbles; single coherent 16:9 illustration; one clear foreground action; absolutely no writing anywhere; no letters, no numbers, no symbols, no logos; clocks have no digits; device screens are blank; one continuous camera view; no panels, no divisions, no collage, no split screen"] if x)
         shot.negative_prompt = negative; shot.status = "pending"; shot.prompt_hash = None
     return plan
 
@@ -188,28 +221,29 @@ def _diversify_scene_shots(narration: str, shots: list) -> list:
 
     cameras = [
         "wide establishing shot with one clear focal action",
+        "medium-wide character shot with one clear focal action",
         "medium character shot at eye level with one clear focal action",
-        "close character reaction shot with one clear focal action",
-        "three-quarter environmental shot with one clear focal action",
+        "close detail of one object or gesture",
+        "environment shot with one clear focal action",
     ]
     for i, shot in enumerate(shots):
         beat = " ".join(beats[i:]) if i == len(shots) - 1 and len(beats) > len(shots) else beats[min(i, len(beats) - 1)]
         low = beat.lower()
-        is_history = any(k in low for k in ("viking", "raid", "porridge", "longhouse", "cow", "pig", "farm", "farmer", "hearth", "family", "firelight", "nap"))
-        is_modern = any(k in low for k in ("phone", "tiktok", "meeting", "snooze", "alarm", "scroll")) and not is_history
+        is_norse = any(k in low for k in ("viking", "norse", "longhouse", "raid", "scandinav"))
+        is_medieval = any(k in low for k in ("medieval", "middle ages", "guild", "manor", "serf", "feudal"))
+        is_roman = any(k in low for k in ("roman", "rome", "legion", "forum", "senate"))
         shot.narration_context = beat
         shot.visual_subject = f"One literal moment from the narration: {beat}"
         shot.action = f"Depict only this action as one frozen readable moment: {beat}"
-        if is_modern:
-            shot.location = "one ordinary modern room"
-            shot.historical_props = ["one blank-screen smartphone", "simple modern furniture"]
-            shot.character_ids = [c for c in shot.character_ids if any(k in c.lower() for k in ("modern", "worker", "alex"))]
-        elif is_history:
+        if is_norse:
             shot.location = "one early-medieval Norse longhouse interior or farmyard appropriate to the action"
             shot.historical_props = ["wool and linen Norse clothing", "wooden household tools", "period-appropriate timber architecture"]
-            shot.character_ids = [c for c in shot.character_ids if not any(k in c.lower() for k in ("modern", "worker", "alex"))]
-            if not any(k in low for k in ("pig", "grum")):
-                shot.character_ids = [c for c in shot.character_ids if not any(k in c.lower() for k in ("pig", "grum"))]
+        elif is_medieval:
+            shot.location = "one medieval European home, workshop, farm or street appropriate to the action"
+            shot.historical_props = ["medieval wool and linen work clothing", "handmade wooden tools", "stone, timber and limewashed architecture"]
+        elif is_roman:
+            shot.location = "one ancient Roman home, workshop, farm or street appropriate to the action"
+            shot.historical_props = ["ancient Roman everyday clothing", "period hand tools", "stone, plaster and timber architecture"]
         else:
             shot.location = re.sub(r"split[ -]?screen.*", "one coherent location appropriate to the action", shot.location, flags=re.I)
             shot.historical_props = [p for p in shot.historical_props if not re.search(r"app|notification|screen|photo|display|text|letter|number", p, re.I)]

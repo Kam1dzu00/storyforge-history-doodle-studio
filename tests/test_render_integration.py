@@ -12,10 +12,11 @@ def test_motion_is_subtle_and_pans_are_locked():
     assert "zoompan" not in _motion_filter("pan_right", 120)
 
 def test_crossfade_graph_uses_scene_boundaries():
-    graph, output = _xfade_graph([3.0, 4.0, 5.0])
-    assert "duration=0.32:offset=3.000000" in graph
-    assert "duration=0.32:offset=7.000000" in graph
-    assert output == "v2"
+    graph, output = _xfade_graph([3.0] * 10)
+    assert graph.count("xfade=")==1
+    assert graph.count("concat=")==8
+    assert "duration=0.16:offset=24.000000" in graph
+    assert output == "v9"
 
 def test_real_ffmpeg_render(tmp_path):
     for rel in ("images","audio","subtitles","render/temp"):(tmp_path/rel).mkdir(parents=True,exist_ok=True)

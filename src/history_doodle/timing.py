@@ -21,3 +21,13 @@ def allocate_timeline(plan: ProjectPlan, duration: float) -> ProjectPlan:
         cursor = scene.end_time
     return plan
 
+def validate_word_timestamps(words, audio_duration: float) -> list[str]:
+    warnings = []
+    previous = 0.0
+    for index, word in enumerate(words):
+        if word.start < previous - .001: raise ValueError(f"Word timestamp {index} is not monotonic")
+        if word.end > audio_duration + .25: raise ValueError(f"Word timestamp {index} exceeds audio duration")
+        gap = word.start - previous
+        if gap > .7: warnings.append(f"Long silence {gap:.2f}s before word {index + 1}")
+        previous = word.end
+    return warnings

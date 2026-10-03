@@ -1,12 +1,15 @@
 from __future__ import annotations
 
-import json, re, shutil, subprocess, wave
+import json, logging, re, shutil, subprocess, wave
 from pathlib import Path
 import numpy as np
 import soundfile as sf
 from .config import WHISPER_REPO
 from .schemas import WordStamp
 from .util import cleanup_models, run
+from .timing import validate_word_timestamps
+
+log = logging.getLogger(__name__)
 
 def split_sentences(text: str, max_chars: int = 350) -> list[str]:
     pieces = re.split(r"(?<=[.!?])\s+", text.strip())
@@ -57,6 +60,7 @@ class TimestampEngine:
         try:
             result = mlx_whisper.transcribe(str(audio_path), path_or_hf_repo=WHISPER_REPO, word_timestamps=True, language="en", verbose=None)
             words = [WordStamp.model_validate(w) for s in result["segments"] for w in s.get("words", [])]
+            for warning in validate_word_timestamps(words, audio_duration(audio_path)): log.warning(warning)
             output_path.write_text(json.dumps([w.model_dump() for w in words], indent=2), encoding="utf-8")
             return words
         finally: cleanup_models()
@@ -64,3 +68,12 @@ class TimestampEngine:
 def audio_duration(path: Path) -> float:
     result = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", str(path)], capture_output=True, text=True, check=True)
     return float(result.stdout.strip())
+
+def quality_report(path: Path) -> dict:
+    duration = audio_duration(path)
+    loud = subprocess.run(["ffmpeg","-hide_banner","-i",str(path),"-af","ebur128=peak=true","-f","null","-"],capture_output=True,text=True)
+    silence = subprocess.run(["ffmpeg","-hide_banner","-i",str(path),"-af","silencedetect=noise=-45dB:d=0.7","-f","null","-"],capture_output=True,text=True)
+    gaps = [float(x) for x in re.findall(r"silence_duration: ([0-9.]+)", silence.stderr)]
+    integrated = re.findall(r"I:\s*(-?[0-9.]+) LUFS", loud.stderr)
+    peak = re.findall(r"Peak:\s*(-?[0-9.]+) dBFS", loud.stderr)
+    return {"duration":duration,"integrated_lufs":float(integrated[-1]) if integrated else None,"peak_dbfs":float(peak[-1]) if peak else None,"silences_over_700ms":gaps,"potential_errors_over_1200ms":[x for x in gaps if x>1.2]}
