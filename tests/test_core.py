@@ -1,7 +1,7 @@
 from pathlib import Path
 import json
 import pytest
-from history_doodle.planner import target_words, finalize_plan_prompts, normalize_shot_counts, parse_director_tags, apply_visual_grammar
+from history_doodle.planner import target_words, finalize_plan_prompts, normalize_shot_counts, parse_director_tags, apply_visual_grammar, extract_production_script
 from history_doodle.render import ffmpeg_available, render
 from history_doodle.schemas import CharacterCard, ProjectPlan, Scene, Shot, StorySection, WordStamp
 from history_doodle.storage import ProjectStore
@@ -105,3 +105,15 @@ def test_viking_tools_script_has_varied_object_first_grammar():
     types=[x.visual_type for x in plan.shots]
     assert sum(x.startswith("CHARACTER") for x in types)<4
     assert "OBJECT_COLLECTION" in types and "ENVIRONMENT" in types
+
+def test_production_blueprint_metadata_is_not_narrated():
+    raw="# TITLE\nA title\n# CORE IDEA\nA pitch\n## 0:00–0:30 — HOOK\n[VISUAL: OBJECT]\n[NO PEOPLE]\nThe real narration starts here."
+    clean=extract_production_script(raw); spoken,tags=parse_director_tags(clean)
+    assert spoken=="The real narration starts here."
+    assert tags[0]["next_cue"]=="The real narration starts here."
+
+def test_unknown_director_character_creates_valid_card():
+    plan=sample_plan(1); plan.shots[0].narration_context="A farmer wakes."
+    plan=apply_visual_grammar(plan,[{"cue":"","next_cue":"A farmer wakes.","VISUAL":"CHARACTER","CHARACTER":"main_viking"}])
+    assert plan.shots[0].character_ids==["main_viking"]
+    assert ProjectPlan.model_validate(plan.model_dump())

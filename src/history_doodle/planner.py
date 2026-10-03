@@ -18,22 +18,37 @@ VISUAL_ALIASES={"CHARACTER":"CHARACTER_MEDIUM","CLOSEUP":"CHARACTER_CLOSEUP","OB
 
 def parse_director_tags(script: str) -> tuple[str,list[dict]]:
     """Remove optional direction lines from spoken text and retain their cue."""
-    spoken=[]; overrides=[]; current=None
+    spoken=[]; overrides=[]; current=None; pending=None
     for line in script.splitlines():
         match=TAG_RE.match(line)
         if match:
             if current is None:
                 cue=(spoken[-1] if spoken else "").strip(); current={"cue":cue}
                 overrides.append(current)
+                pending=current
             key=(match.group(1) or match.group(3)).upper(); value=(match.group(2) or "true").strip()
             current[key]=value
         else:
-            if line.strip(): spoken.append(line)
+            if line.strip():
+                spoken.append(line)
+                if pending is not None and not pending.get("next_cue"): pending["next_cue"]=line.strip()
             current=None
     return "\n".join(spoken).strip(),overrides
 
 def strip_director_tags(script: str) -> str:
     return parse_director_tags(script)[0]
+
+def extract_production_script(script: str) -> str:
+    """Keep narration and director tags, discard production metadata/headings."""
+    lines=script.splitlines()
+    timed=next((i for i,line in enumerate(lines) if re.match(r"^\s*##\s*\d{1,2}:\d{2}",line)),None)
+    if timed is not None: lines=lines[timed+1:]
+    kept=[]
+    for line in lines:
+        stripped=line.strip()
+        if re.match(r"^#{1,6}\s+",stripped) or re.match(r"^-{3,}$",stripped): continue
+        kept.append(line)
+    return "\n".join(kept).strip()
 
 def _auto_visual_type(text: str) -> str:
     low=text.lower()
@@ -52,12 +67,23 @@ def _auto_visual_type(text: str) -> str:
 def apply_visual_grammar(plan: ProjectPlan, overrides: list[dict] | None=None) -> ProjectPlan:
     object_types={"OBJECT_HERO","OBJECT_COLLECTION","ENVIRONMENT","INFO_CARD","MAP"}
     ordered=sorted(plan.shots,key=lambda x:x.order); overrides=overrides or []
+    known={c.id for c in plan.characters}
+    for ident in dict.fromkeys(x.get("CHARACTER") for x in overrides if x.get("CHARACTER")):
+        if ident in known: continue
+        modern="modern" in ident.lower()
+        plan.characters.append(CharacterCard(
+            id=ident,
+            name=ident.replace("_"," ").title(),
+            role="recurring visual anchor",
+            visual_identity=("the same adult modern office worker, natural adult proportions, tired oval face, short brown hair, plain muted T-shirt and lounge trousers" if modern else "the same adult Viking-age farmer, natural adult proportions, weathered oval face, tied brown hair, short brown beard, muted wool tunic, dark trousers, leather boots"),
+            fixed_traits=(["same adult face","same short brown hair","same muted modern clothing","natural adult proportions"] if modern else ["same adult face","same tied brown hair","same short beard","same muted Viking-age clothing","natural adult proportions"]),
+        )); known.add(ident)
     for shot in ordered:
         shot.visual_type=_auto_visual_type(shot.narration_context or shot.visual_subject)
         shot.director_override=False
         for override in overrides:
-            cue=override.get("cue","")
-            if cue and (cue in shot.narration_context or SequenceMatcher(None,cue.lower(),shot.narration_context.lower()).ratio()>.55):
+            cues=[override.get("next_cue",""),override.get("cue","")]
+            if any(cue and (cue in shot.narration_context or SequenceMatcher(None,cue.lower(),shot.narration_context.lower()).ratio()>.55) for cue in cues):
                 requested=VISUAL_ALIASES.get(override.get("VISUAL","").upper())
                 if requested: shot.visual_type=requested
                 if "OBJECTS" in override: shot.objects=[x.strip() for x in override["OBJECTS"].split("|") if x.strip()]
@@ -132,6 +158,7 @@ class LocalPlanner:
         return re.sub(r"\s+", " ", result).strip()
 
     def plan(self, script: str, duration: int, base_seed: int) -> ProjectPlan:
+        script = extract_production_script(script)
         script, director_overrides = parse_director_tags(script)
         style = STYLE_PROMPT.read_text().strip(); negative = NEGATIVE_PROMPT.read_text().strip()
         expected = max(5, round(duration / 6.7))

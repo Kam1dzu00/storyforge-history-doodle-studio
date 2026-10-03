@@ -5,7 +5,7 @@ APP="$ROOT/HistoryDoodle Studio.app"
 TMP="$(mktemp -d)"
 cat > "$TMP/launcher.applescript" <<APPLESCRIPT
 on run
-  do shell script "cd " & quoted form of "$ROOT" & " && nohup " & quoted form of "$ROOT/.venv/bin/python" & " -m history_doodle.app >" & quoted form of "$ROOT/logs/launcher.log" & " 2>&1 &"
+  do shell script "export PATH=" & quoted form of "$HOME/.npm-global/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin" & "; cd " & quoted form of "$ROOT" & " && nohup " & quoted form of "$ROOT/.venv/bin/python" & " -m history_doodle.app >" & quoted form of "$ROOT/logs/launcher.log" & " 2>&1 &"
 end run
 APPLESCRIPT
 rm -rf "$APP"

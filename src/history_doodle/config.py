@@ -30,8 +30,22 @@ def configure_model_cache() -> None:
     os.environ.setdefault("TRANSFORMERS_CACHE", str(cache / "transformers"))
     os.environ.setdefault("MFLUX_MODEL_PATH", str(MODELS_DIR / "image"))
 
+def configure_tool_path() -> None:
+    """Finder-launched macOS apps do not inherit the user's shell PATH."""
+    candidates = [
+        str(Path.home() / ".npm-global/bin"),
+        "/opt/homebrew/bin",
+        "/usr/local/bin",
+        "/usr/bin",
+        "/bin",
+        "/usr/sbin",
+        "/sbin",
+    ]
+    current = os.environ.get("PATH", "").split(os.pathsep)
+    os.environ["PATH"] = os.pathsep.join(dict.fromkeys(candidates + current))
+
 def ensure_dirs() -> None:
     for path in (MODELS_DIR / "llm", MODELS_DIR / "image", MODELS_DIR / "tts", MODELS_DIR / "whisper", MODELS_DIR / "cache", PROJECTS_DIR, LOGS_DIR):
         path.mkdir(parents=True, exist_ok=True)
     configure_model_cache()
-
+    configure_tool_path()
