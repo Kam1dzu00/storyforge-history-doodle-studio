@@ -50,7 +50,15 @@ class Pipeline:
         self._check_cancel()
         script = strip_director_tags(extract_production_script((self.project/"script.txt").read_text(encoding="utf-8"))); self.event("Создаю английскую озвучку…")
         started=time.time()
-        wav = VoiceEngine().generate(script, self.project/"audio", self.state.voice, lambda i,n:self.event(f"Озвучиваю фрагмент {i} из {n}…"))
+        segment_map = self.project / "voice_segments.json"
+        if segment_map.exists():
+            segments = json.loads(segment_map.read_text(encoding="utf-8"))
+            segment_text = "\n\n".join(str(x["text"]).strip() for x in segments).strip()
+            if " ".join(segment_text.split()) != " ".join(script.split()):
+                raise ValueError("Voice segment text does not exactly match locked narration")
+            wav = VoiceEngine().generate_segments(segments, self.project/"audio", self.state.voice, lambda i,n:self.event(f"Озвучиваю фрагмент {i} из {n}…"))
+        else:
+            wav = VoiceEngine().generate(script, self.project/"audio", self.state.voice, lambda i,n:self.event(f"Озвучиваю фрагмент {i} из {n}…"))
         self.metrics["voice_generation_seconds"]=round(time.time()-started,2)
         self.state.voice_status="complete"; self._save(); self.event("Синхронизирую слова с аудио…")
         started=time.time()

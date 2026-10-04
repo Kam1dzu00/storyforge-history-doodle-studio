@@ -5,6 +5,19 @@ from history_doodle.planner import target_words, finalize_plan_prompts, normaliz
 from history_doodle.render import ffmpeg_available, render
 from history_doodle.schemas import CharacterCard, ProjectPlan, Scene, Shot, StorySection, WordStamp
 from history_doodle.storage import ProjectStore
+
+
+def test_segment_voice_map_must_match_locked_narration(tmp_path, monkeypatch):
+    project = ProjectStore(tmp_path).create("Voice map", "script", 60, "am_michael", "First line.\n\nSecond line.")
+    (project / "voice_segments.json").write_text('[{"text":"Changed line.","speed":0.9,"pause_after_ms":300}]')
+    from history_doodle.pipeline import Pipeline
+    monkeypatch.setattr("history_doodle.pipeline.VoiceEngine.generate_segments", lambda *args, **kwargs: None)
+    try:
+        Pipeline(project).generate_voice()
+    except ValueError as exc:
+        assert "does not exactly match" in str(exc)
+    else:
+        raise AssertionError("mismatched voice metadata must be rejected")
 from history_doodle.subtitles import chunks
 from history_doodle.timing import allocate_timeline, validate_word_timestamps
 from history_doodle.util import prompt_hash, shot_seed

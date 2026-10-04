@@ -54,6 +54,57 @@ class VoiceEngine:
         run(["ffmpeg", "-y", "-i", str(wav), "-c:a", "aac", "-b:a", "192k", str(out_dir / "narration.m4a")])
         return wav
 
+    def generate_segments(self, segments: list[dict], out_dir: Path, voice: str, progress=lambda *_: None) -> Path:
+        """Generate narration with per-segment Kokoro speed and explicit pauses.
+
+        This is opt-in so existing projects keep their established audio path.
+        Each production segment may be split for TTS stability, but its speed is
+        preserved and PAUSE_AFTER is inserted only after the complete segment.
+        """
+        from kokoro import KPipeline
+        chunk_dir = out_dir / "chunks"; chunk_dir.mkdir(parents=True, exist_ok=True)
+        pipeline = KPipeline(lang_code="a")
+        cleaned: list[tuple[Path, int]] = []
+        total = sum(len(split_sentences(str(x["text"]))) for x in segments)
+        current = 0
+        try:
+            for segment_index, segment in enumerate(segments, 1):
+                parts = split_sentences(str(segment["text"]))
+                speed = float(segment["speed"])
+                pause_ms = int(segment["pause_after_ms"])
+                if not 0.5 <= speed <= 1.5 or not 0 <= pause_ms <= 5000:
+                    raise ValueError(f"Invalid voice metadata in segment {segment_index}")
+                for part_index, text in enumerate(parts, 1):
+                    current += 1; progress(current, total)
+                    audio_parts = [np.asarray(audio, dtype=np.float32) for _, _, audio in pipeline(text, voice=voice, speed=speed)]
+                    if not audio_parts: raise RuntimeError(f"Kokoro produced no audio for segment {segment_index}")
+                    stem = f"segment_{segment_index:04d}_{part_index:02d}"
+                    raw = chunk_dir / f"raw_{stem}.wav"; dest = chunk_dir / f"{stem}.wav"
+                    sf.write(raw, np.concatenate(audio_parts), 24000)
+                    trim = "silenceremove=start_periods=1:start_duration=0:start_threshold=-48dB,areverse,silenceremove=start_periods=1:start_duration=0:start_threshold=-48dB,areverse,loudnorm=I=-16:TP=-1:LRA=9"
+                    run(["ffmpeg", "-y", "-i", str(raw), "-af", trim, "-ar", "24000", str(dest)])
+                    raw.unlink(missing_ok=True)
+                    cleaned.append((dest, pause_ms if part_index == len(parts) else 120))
+        finally:
+            del pipeline
+            cleanup_models()
+
+        gap_paths: dict[int, Path] = {}
+        for pause_ms in sorted({pause for _, pause in cleaned[:-1] if pause > 0}):
+            gap = out_dir / f"gap_{pause_ms:04d}ms.wav"
+            run(["ffmpeg", "-y", "-f", "lavfi", "-i", "anullsrc=r=24000:cl=mono", "-t", f"{pause_ms / 1000:.3f}", str(gap)])
+            gap_paths[pause_ms] = gap
+        concat = out_dir / "concat.txt"; lines = []
+        for index, (path, pause_ms) in enumerate(cleaned):
+            lines.append(f"file '{path.resolve().as_posix()}'")
+            if index + 1 < len(cleaned) and pause_ms > 0:
+                lines.append(f"file '{gap_paths[pause_ms].resolve().as_posix()}'")
+        concat.write_text("\n".join(lines), encoding="utf-8")
+        wav = out_dir / "narration.wav"
+        run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", str(concat), "-af", "loudnorm=I=-16:TP=-1:LRA=9", "-ar", "48000", "-ac", "1", str(wav)])
+        run(["ffmpeg", "-y", "-i", str(wav), "-c:a", "aac", "-b:a", "192k", str(out_dir / "narration.m4a")])
+        return wav
+
 class TimestampEngine:
     def transcribe(self, audio_path: Path, output_path: Path) -> list[WordStamp]:
         import mlx_whisper
