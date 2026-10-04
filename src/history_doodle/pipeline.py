@@ -65,7 +65,22 @@ class Pipeline:
         TimestampEngine().transcribe(wav, self.project/"audio/word_timestamps.json")
         self.metrics["whisper_alignment_seconds"]=round(time.time()-started,2)
         (self.project/"audio/quality_report.json").write_text(json.dumps(quality_report(wav),indent=2),encoding="utf-8")
-        plan = allocate_timeline(self.store.load_plan(self.project), audio_duration(wav)); self.store.save_plan(self.project, plan); return wav
+        plan = self.store.load_plan(self.project)
+        voice_timeline = self.project / "audio/voice_timeline.json"
+        if voice_timeline.exists():
+            timeline = json.loads(voice_timeline.read_text(encoding="utf-8"))
+            ordered_scenes = sorted(plan.scenes, key=lambda x: x.order)
+            ordered_shots = sorted(plan.shots, key=lambda x: x.order)
+            if len(timeline) != len(ordered_scenes) or len(timeline) != len(ordered_shots):
+                raise ValueError("Voice timeline does not match the planned shot count")
+            final_duration = audio_duration(wav)
+            for index, (scene, shot, timing) in enumerate(zip(ordered_scenes, ordered_shots, timeline)):
+                scene.start_time = shot.start_time = float(timing["start"])
+                end = final_duration if index + 1 == len(timeline) else float(timing["end"])
+                scene.end_time = shot.end_time = end
+        else:
+            plan = allocate_timeline(plan, audio_duration(wav))
+        self.store.save_plan(self.project, plan); return wav
 
     def generate_images(self, only: str|None=None, new_seed=False):
         self._check_cancel()

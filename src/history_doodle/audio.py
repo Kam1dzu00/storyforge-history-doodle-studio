@@ -64,7 +64,7 @@ class VoiceEngine:
         from kokoro import KPipeline
         chunk_dir = out_dir / "chunks"; chunk_dir.mkdir(parents=True, exist_ok=True)
         pipeline = KPipeline(lang_code="a")
-        cleaned: list[tuple[Path, int]] = []
+        cleaned: list[tuple[Path, int, int]] = []
         total = sum(len(split_sentences(str(x["text"]))) for x in segments)
         current = 0
         try:
@@ -84,22 +84,32 @@ class VoiceEngine:
                     trim = "silenceremove=start_periods=1:start_duration=0:start_threshold=-48dB,areverse,silenceremove=start_periods=1:start_duration=0:start_threshold=-48dB,areverse,loudnorm=I=-16:TP=-1:LRA=9"
                     run(["ffmpeg", "-y", "-i", str(raw), "-af", trim, "-ar", "24000", str(dest)])
                     raw.unlink(missing_ok=True)
-                    cleaned.append((dest, pause_ms if part_index == len(parts) else 120))
+                    cleaned.append((dest, pause_ms if part_index == len(parts) else 120, segment_index))
         finally:
             del pipeline
             cleanup_models()
 
         gap_paths: dict[int, Path] = {}
-        for pause_ms in sorted({pause for _, pause in cleaned[:-1] if pause > 0}):
+        for pause_ms in sorted({pause for _, pause, _ in cleaned[:-1] if pause > 0}):
             gap = out_dir / f"gap_{pause_ms:04d}ms.wav"
             run(["ffmpeg", "-y", "-f", "lavfi", "-i", "anullsrc=r=24000:cl=mono", "-t", f"{pause_ms / 1000:.3f}", str(gap)])
             gap_paths[pause_ms] = gap
         concat = out_dir / "concat.txt"; lines = []
-        for index, (path, pause_ms) in enumerate(cleaned):
+        timeline, cursor = [], 0.0
+        for index, (path, pause_ms, segment_index) in enumerate(cleaned):
             lines.append(f"file '{path.resolve().as_posix()}'")
+            duration = sf.info(path).duration
+            if not timeline or timeline[-1]["segment"] != segment_index:
+                timeline.append({"segment": segment_index, "start": cursor, "end": cursor + duration})
+            else:
+                timeline[-1]["end"] = cursor + duration
+            cursor += duration
             if index + 1 < len(cleaned) and pause_ms > 0:
                 lines.append(f"file '{gap_paths[pause_ms].resolve().as_posix()}'")
+                cursor += pause_ms / 1000
+                timeline[-1]["end"] = cursor
         concat.write_text("\n".join(lines), encoding="utf-8")
+        (out_dir / "voice_timeline.json").write_text(json.dumps(timeline, indent=2), encoding="utf-8")
         wav = out_dir / "narration.wav"
         run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", str(concat), "-af", "loudnorm=I=-16:TP=-1:LRA=9", "-ar", "48000", "-ac", "1", str(wav)])
         run(["ffmpeg", "-y", "-i", str(wav), "-c:a", "aac", "-b:a", "192k", str(out_dir / "narration.m4a")])
