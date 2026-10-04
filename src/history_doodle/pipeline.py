@@ -109,8 +109,12 @@ class Pipeline:
 
     def render_video(self):
         started=time.time()
-        self.event("Собираю готовое видео…"); plan=self.store.load_plan(self.project); music=Path(self.state.background_music) if self.state.background_music else None
-        result=render(self.project,plan,self.project/"audio/narration.wav",self.project/"subtitles/subtitles.ass",music,lambda i,n:self.event(f"Обрабатываю кадр {i} из {n}…"))
+        self.event("Собираю готовое видео…"); plan=self.store.load_plan(self.project)
+        result=render(self.project,plan,self.project/"audio/narration.wav",self.project/"subtitles/subtitles.ass",None,lambda i,n:self.event(f"Обрабатываю кадр {i} из {n}…"))
+        if self.state.background_music_enabled or self.state.background_music:
+            from .mastering import master_background_music
+            self.event("Добавляю фоновую атмосферу без повторного кодирования видео…")
+            master_background_music(self.project, self.state)
         self.metrics["render_seconds"]=round(time.time()-started,2); self._merge_metrics()
         self.state.render_status="complete"; self._save(); return result
 

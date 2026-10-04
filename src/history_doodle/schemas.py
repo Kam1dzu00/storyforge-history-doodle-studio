@@ -108,6 +108,12 @@ class ProjectState(BaseModel):
     voice: str = "am_michael"
     base_seed: int = 42000
     background_music: str | None = None
+    background_music_enabled: bool = False
+    background_music_mode: Literal["user_file", "procedural"] = "procedural"
+    background_music_gain_db: float = 0.0
+    background_music_duck_db: float = 6.0
+    background_music_fade_in: float = 2.0
+    background_music_fade_out: float = 5.0
     script_status: str = "pending"
     planning_status: str = "pending"
     voice_status: str = "pending"
