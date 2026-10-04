@@ -59,22 +59,32 @@ class Window(QMainWindow):
         self.status=QLabel("Готово к работе"); self.status.setObjectName("status"); cv.addWidget(self.status); split.addWidget(center_scroll)
         self.project_info=QLabel("Слов: 0 · Голос: — · Сцен: 0 · Кадров: 0 · Изображения: 0 / 0 · Видео: не собрано"); self.project_info.setObjectName("muted"); cv.addWidget(self.project_info)
 
-        right=QFrame(); right.setObjectName("inspector"); rv=QVBoxLayout(right); rv.setContentsMargins(18,18,18,18); rv.setSpacing(10)
+        right_scroll=QScrollArea(); right_scroll.setObjectName("inspectorScroll"); right_scroll.setWidgetResizable(True); right_scroll.setFrameShape(QFrame.NoFrame)
+        right=QFrame(); right.setObjectName("inspector"); right_scroll.setWidget(right); rv=QVBoxLayout(right); rv.setContentsMargins(18,18,18,18); rv.setSpacing(10)
         story_title=QLabel("РАСКАДРОВКА И ПРОСМОТР"); story_title.setObjectName("eyebrow"); rv.addWidget(story_title)
         self.tree=QTreeWidget(); self.tree.setHeaderHidden(True); self.tree.itemClicked.connect(self.show_item); rv.addWidget(self.tree,2)
         self.grid=QListWidget(); self.grid.setViewMode(QListWidget.IconMode); self.grid.setIconSize(QSize(150,84)); self.grid.setResizeMode(QListWidget.Adjust); self.grid.setSpacing(8); self.grid.setMaximumHeight(245); self.grid.itemClicked.connect(self.show_grid_item); rv.addWidget(self.grid)
         self.preview=QLabel("Здесь появится выбранный сгенерированный кадр"); self.preview.setObjectName("preview"); self.preview.setAlignment(Qt.AlignCenter); self.preview.setMinimumHeight(230); self.preview.setWordWrap(True); rv.addWidget(self.preview)
         self.shot_meta=QLabel(""); self.shot_meta.setObjectName("muted"); self.shot_meta.setWordWrap(True); rv.addWidget(self.shot_meta)
         self.visual_type=QComboBox(); self.visual_type.addItems(["CHARACTER_WIDE","CHARACTER_MEDIUM","CHARACTER_CLOSEUP","OBJECT_HERO","OBJECT_COLLECTION","DETAIL","ENVIRONMENT","INFO_CARD","MAP","COMPARISON","SILHOUETTE","GROUP"]); self.visual_type.currentTextChanged.connect(self.change_visual_type); rv.addWidget(self.visual_type)
+        direction=QFrame(); direction.setObjectName("card"); df=QFormLayout(direction); df.setContentsMargins(10,8,10,8); df.setSpacing(6)
+        self.visual_purpose=QLabel(""); self.visual_purpose.setWordWrap(True); self.visual_purpose.setObjectName("muted")
+        self.action_edit=QLineEdit(); self.placement_edit=QComboBox(); self.placement_edit.addItems(["LEFT_THIRD","RIGHT_THIRD","LOWER_LEFT","LOWER_RIGHT","FOREGROUND_LEFT","FOREGROUND_RIGHT","SMALL_IN_ENVIRONMENT","OFF_CENTER","CENTERED_OBJECT","CENTERED_CHARACTER"])
+        self.angle_edit=QComboBox(); self.angle_edit.addItems(["EYE_LEVEL","SLIGHT_LOW","SLIGHT_HIGH","THREE_QUARTER","PROFILE","OVER_SHOULDER","TOP_DOWN_OBJECT","FRONTAL_OBJECT"])
+        self.framing_edit=QComboBox(); self.framing_edit.addItems(["WIDE","MEDIUM_WIDE","MEDIUM","CLOSEUP","DETAIL","ENVIRONMENTAL_WIDE"])
+        self.composition_edit=QLineEdit(); self.historical_details=QLabel(""); self.historical_details.setWordWrap(True); self.historical_details.setObjectName("muted")
+        df.addRow("Задача кадра",self.visual_purpose); df.addRow("Действие",self.action_edit); df.addRow("Позиция",self.placement_edit); df.addRow("Ракурс",self.angle_edit); df.addRow("Крупность",self.framing_edit); df.addRow("Композиция",self.composition_edit); df.addRow("Исторические детали",self.historical_details)
+        rv.addWidget(direction)
+        rebuild_prompt=QPushButton("Пересобрать промпт выбранного кадра"); rebuild_prompt.setObjectName("quiet"); rebuild_prompt.clicked.connect(self.rebuild_shot_prompt); rv.addWidget(rebuild_prompt)
         self.details=QTextEdit(); self.details.setPlaceholderText("Выберите сцену или кадр, чтобы посмотреть и изменить описание."); rv.addWidget(self.details,1)
         save=QPushButton("Сохранить описание кадра"); save.setObjectName("quiet"); save.clicked.connect(self.save_prompt); rv.addWidget(save)
         actions=QHBoxLayout(); same=QPushButton("Повторить точно"); same.setToolTip("Сгенерировать кадр повторно с тем же числом случайности"); same.setObjectName("quiet"); same.clicked.connect(lambda:self.regen(False)); regen=QPushButton("Новый вариант"); regen.clicked.connect(lambda:self.regen(True)); actions.addWidget(same); actions.addWidget(regen); rv.addLayout(actions)
         shot_actions=QHBoxLayout(); open_image=QPushButton("Открыть изображение"); open_image.setObjectName("quiet"); open_image.clicked.connect(self.open_image); preview_scene=QPushButton("Превью сцены"); preview_scene.setObjectName("quiet"); preview_scene.clicked.connect(self.preview_selected_scene); shot_actions.addWidget(open_image); shot_actions.addWidget(preview_scene); rv.addLayout(shot_actions)
         openv=QPushButton("▶  Открыть готовое видео"); openv.setObjectName("secondary"); openv.clicked.connect(self.open_video); rv.addWidget(openv)
-        tools=QHBoxLayout(); finder=QPushButton("Показать файлы"); finder.setObjectName("quiet"); finder.clicked.connect(self.show_finder); style=QPushButton("Референс стиля"); style.setObjectName("quiet"); style.clicked.connect(self.replace_style_reference); tools.addWidget(finder); tools.addWidget(style); rv.addLayout(tools); split.addWidget(right); split.setSizes([235,780,425]); split.setCollapsible(0,False); split.setCollapsible(1,False)
+        tools=QHBoxLayout(); finder=QPushButton("Показать файлы"); finder.setObjectName("quiet"); finder.clicked.connect(self.show_finder); style=QPushButton("Референс стиля"); style.setObjectName("quiet"); style.clicked.connect(self.replace_style_reference); tools.addWidget(finder); tools.addWidget(style); rv.addLayout(tools); split.addWidget(right_scroll); split.setSizes([235,780,425]); split.setCollapsible(0,False); split.setCollapsible(1,False)
         self.setStyleSheet("""
             *{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text';font-size:14px;color:#eef2f6}
-            QWidget#root,QWidget#workspace,QScrollArea#workspaceScroll,QScrollArea#workspaceScroll>QWidget>QWidget{background:#0b0e12} QFrame#header{background:#10151b;border-bottom:1px solid #232b35} QFrame#sidebar,QFrame#inspector{background:#10151b} QFrame#sidebar{border-right:1px solid #232b35} QFrame#inspector{border-left:1px solid #232b35}
+            QWidget#root,QWidget#workspace,QScrollArea#workspaceScroll,QScrollArea#workspaceScroll>QWidget>QWidget{background:#0b0e12} QFrame#header{background:#10151b;border-bottom:1px solid #232b35} QFrame#sidebar,QFrame#inspector,QScrollArea#inspectorScroll,QScrollArea#inspectorScroll>QWidget>QWidget{background:#10151b} QFrame#sidebar{border-right:1px solid #232b35} QFrame#inspector{border-left:1px solid #232b35}
             QLabel#brand{font-size:17px;font-weight:800;letter-spacing:1px} QLabel#h1{font-size:30px;font-weight:800} QLabel#eyebrow{font-size:11px;font-weight:700;color:#758294;letter-spacing:1px} QLabel#muted{color:#98a3b2} QLabel#status{background:#141a21;border:1px solid #27313d;border-radius:10px;padding:12px;color:#b9c3cf} QLabel#stage{padding:8px 10px;border-radius:8px;color:#778393} QLabel#stage[complete='true']{color:#a7dfb4;background:#14231a} QLabel#chip{color:#d8ab69;background:#2a2117;border:1px solid #4e3a23;border-radius:8px;padding:8px}
             QLabel#stage[failed='true']{color:#ff9d9d;background:#321919} QLabel#stage[stale='true']{color:#e2b765;background:#2d2415}
             QFrame#card{background:#121820;border:1px solid #29333f;border-radius:14px} QTextEdit,QLineEdit,QListWidget,QTreeWidget,QComboBox,QSpinBox{background:#11171e;border:1px solid #303b48;border-radius:10px;padding:9px;selection-background-color:#d79847;selection-color:#111} QLineEdit#titleInput{font-size:17px;font-weight:600;padding:13px} QTextEdit:focus,QLineEdit:focus,QListWidget:focus,QTreeWidget:focus,QComboBox:focus,QSpinBox:focus{border:1px solid #d79847}
@@ -169,6 +179,7 @@ class Window(QMainWindow):
             names={c.id:c.name for c in plan.characters}; people=", ".join(names.get(x,x) for x in sh.character_ids) or "нет"
             self.shot_meta.setText(f"Тип: {sh.visual_type} · Людей: {sh.people_count} · Объекты: {', '.join(sh.objects) or 'нет'} · Персонажи: {people} · Движение: {sh.camera_motion} · Время: {sh.start_time or 0:.1f}–{sh.end_time or 0:.1f} сек. · Seed: {sh.seed}")
             self.visual_type.blockSignals(True); self.visual_type.setCurrentText(sh.visual_type); self.visual_type.blockSignals(False)
+            self.visual_purpose.setText(sh.visual_purpose); self.action_edit.setText(sh.action_description); self.placement_edit.setCurrentText(sh.subject_placement); self.angle_edit.setCurrentText(sh.camera_angle); self.framing_edit.setCurrentText(sh.framing); self.composition_edit.setText(sh.composition); self.historical_details.setText(", ".join(sh.historical_story_details))
             if sh.image_path:
                 pix=QPixmap(str(self.project/sh.image_path)); self.preview.setPixmap(pix.scaled(self.preview.size(),Qt.KeepAspectRatio,Qt.SmoothTransformation))
     def save_prompt(self):
@@ -183,6 +194,13 @@ class Window(QMainWindow):
         elif not sh.character_ids and plan.characters: sh.character_ids=[plan.characters[0].id]
         build_shot_prompt(sh,{c.id:c for c in plan.characters}); sh.status="stale"; sh.prompt_hash=None
         self.store.save_plan(self.project,plan); state=self.store.load_state(self.project); state.images_status="stale"; state.render_status="stale"; self.store.save_state(self.project,state); self.details.setPlainText(sh.prompt); self.refresh_tree()
+    def rebuild_shot_prompt(self):
+        if not self.project or not getattr(self,"current_shot",None): return
+        plan=self.store.load_plan(self.project); sh=next(x for x in plan.shots if x.id==self.current_shot)
+        sh.action_description=self.action_edit.text().strip() or sh.action_description; sh.subject_placement=self.placement_edit.currentText(); sh.camera_angle=self.angle_edit.currentText(); sh.framing=self.framing_edit.currentText(); sh.composition=self.composition_edit.text().strip() or sh.composition; sh.director_override=True
+        if sh.subject_placement=="CENTERED_CHARACTER" and not sh.centered_justification: sh.centered_justification="manual user composition"
+        build_shot_prompt(sh,{c.id:c for c in plan.characters}); sh.status="stale"; sh.prompt_hash=None; self.store.save_plan(self.project,plan)
+        state=self.store.load_state(self.project); state.images_status="stale"; state.render_status="stale"; self.store.save_state(self.project,state); self.details.setPlainText(sh.prompt); self.refresh_tree()
     def regen(self,new_seed=True):
         if getattr(self,"current_shot",None): self.run_custom(lambda:Pipeline(self.project,lambda m:self.worker.progress.emit(m)).generate_images(self.current_shot,new_seed))
     def open_image(self):

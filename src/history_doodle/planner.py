@@ -13,8 +13,10 @@ log = logging.getLogger(__name__)
 def target_words(seconds: int, wpm: int = 158) -> int:
     return round(seconds * wpm / 60)
 
-TAG_RE = re.compile(r"^\s*\[(VISUAL|CHARACTER|OBJECTS|LABELS|BACKGROUND|COMPOSITION)\s*:\s*([^]]+)\]\s*$|^\s*\[(NO PEOPLE)\]\s*$", re.I)
+TAG_RE = re.compile(r"^\s*\[(VISUAL|CHARACTER|OBJECTS|LABELS|BACKGROUND|COMPOSITION|PLACEMENT|ANGLE|FOREGROUND|ACTION)\s*:\s*([^]]+)\]\s*$|^\s*\[(NO PEOPLE)\]\s*$", re.I)
 VISUAL_ALIASES={"CHARACTER":"CHARACTER_MEDIUM","CLOSEUP":"CHARACTER_CLOSEUP","OBJECT":"OBJECT_HERO","OBJECT_COLLECTION":"OBJECT_COLLECTION","DETAIL":"DETAIL","ENVIRONMENT":"ENVIRONMENT","INFO":"INFO_CARD","MAP":"MAP","COMPARISON":"COMPARISON"}
+PLACEMENT_ALIASES={"LEFT":"LEFT_THIRD","RIGHT":"RIGHT_THIRD","SMALL_IN_ENVIRONMENT":"SMALL_IN_ENVIRONMENT","LEFT_THIRD":"LEFT_THIRD","RIGHT_THIRD":"RIGHT_THIRD","CENTER":"CENTERED_CHARACTER"}
+ANGLE_ALIASES={"PROFILE":"PROFILE","THREE_QUARTER":"THREE_QUARTER","TOP_DOWN":"TOP_DOWN_OBJECT","OVER_SHOULDER":"OVER_SHOULDER","EYE_LEVEL":"EYE_LEVEL","SLIGHT_LOW":"SLIGHT_LOW","SLIGHT_HIGH":"SLIGHT_HIGH"}
 
 def parse_director_tags(script: str) -> tuple[str,list[dict]]:
     """Remove optional direction lines from spoken text and retain their cue."""
@@ -60,9 +62,105 @@ def _auto_visual_type(text: str) -> str:
     if len(object_words)>=2 or ("several" in low and "tool" in low): return "OBJECT_COLLECTION"
     if object_words: return "OBJECT_HERO"
     if any(x in low for x in ("bowl","porridge","bread","fabric","fire","hearth","carved")): return "DETAIL"
-    if any(x in low for x in ("village","house","home","farm","field","fjord","workshop","street","ship","landscape")): return "ENVIRONMENT"
+    if any(x in low for x in ("village","house","home","farm","field","fjord","workshop","street","ship","boat","coast","landscape")): return "ENVIRONMENT"
     if any(x in low for x in ("felt","afraid","angry","worried","surprised","tired")): return "CHARACTER_CLOSEUP"
     return "CHARACTER_MEDIUM"
+
+def _historical_details(text: str, location: str) -> list[str]:
+    details=[]
+    groups=[
+        (("hearth","longhouse","inside","house"),["timber longhouse construction","central hearth with clay vessel","rough wooden bench"]),
+        (("farm","animal","chicken","goat","fence"),["rough woven wooden fence","packed-earth farmyard","timber longhouse","stacked split firewood"]),
+        (("coast","sea","fjord","boat"),["clinker-built wooden boat","northern coastal landscape","tarred rope and timber planks"]),
+        (("tool","axe","sickle","knife","repair"),["simple iron tool","worn wooden handle","rough timber work surface"]),
+        (("food","porridge","cook","bowl"),["wooden bowl","simple clay pot","glowing hearth embers"]),
+        (("trade","market"),["simple wooden chest","balance weights","bundled wool textile"]),
+    ]
+    # The current narration beat is authoritative. A broad scene location may
+    # supply continuity only when the beat itself has no specific context.
+    for source in (text.lower(), location.lower()):
+        for words,cues in groups:
+            if any(x in source for x in words): details.extend(cues)
+        if details: break
+    if not details: details=["period-appropriate timber construction","wool and leather everyday materials"]
+    return list(dict.fromkeys(details))[:4]
+
+def _specific_action(text: str, visual_type: str) -> str:
+    low=text.lower()
+    if ("chicken" in low or "goat" in low) and re.search(r"\b(?:feed|feeds|feeding|fed)\b",low):
+        return "bending beside a rough fence while scattering grain toward waiting chickens and goats"
+    actions=[
+        (("repair","fence"),"kneeling beside a broken fence rail and tying it securely with rough rope"),
+        (("boat","maint"),"pressing a replacement timber plank against the side of a pulled-up wooden boat"),
+        (("wake","sunrise"),"pushing aside a wool blanket and sitting up beside the smoking hearth"),
+        (("sharpen",),"drawing an iron blade steadily across a worn whetstone"),
+        (("carry","bucket"),"walking toward the longhouse while carrying a wooden bucket"),
+        (("cook","porridge","hearth"),"stirring a clay pot carefully above the hearth embers"),
+    ]
+    for words,action in actions:
+        if all(x in low for x in words): return action
+    if visual_type.startswith("CHARACTER"):
+        cleaned=_concrete_visual_beat(text)
+        if re.search(r"\b(?:standing|posing|looking at camera|viking in scene)\b",cleaned,re.I) or len(cleaned.split())<4:
+            return "performing the practical historical task explicitly described by the narration, naturally focused on the activity"
+        return cleaned
+    return "show the concrete object, detail or environment described by the narration"
+
+def apply_composition_engine(plan: ProjectPlan, overrides: list[dict] | None=None) -> ProjectPlan:
+    """Turn visual grammar into concrete, layered, historically specific direction."""
+    overrides=overrides or []; ordered=sorted(plan.shots,key=lambda x:x.order)
+    placements=["RIGHT_THIRD","LEFT_THIRD","FOREGROUND_RIGHT","SMALL_IN_ENVIRONMENT","LOWER_LEFT","FOREGROUND_LEFT"]
+    angles=["THREE_QUARTER","PROFILE","EYE_LEVEL","SLIGHT_HIGH","OVER_SHOULDER","SLIGHT_LOW"]
+    for index,shot in enumerate(ordered):
+        text=shot.narration_context or shot.visual_subject
+        character=shot.visual_type.startswith("CHARACTER") or shot.visual_type in {"GROUP","SILHOUETTE"}
+        shot.visual_purpose=("show the specific human action or reaction in this narration beat" if character else f"show the concrete {shot.visual_type.lower().replace('_',' ')} that communicates this narration beat")
+        shot.action_description=_specific_action(text,shot.visual_type)
+        shot.historical_story_details=_historical_details(text,shot.location)
+        shot.environment_context=", ".join(shot.historical_story_details[:2])
+        shot.continuity_key=shot.scene_id
+        shot.time_of_day="dawn" if any(x in text.lower() for x in ("sunrise","morning","wakes")) else "evening" if "evening" in text.lower() else "day"
+        shot.weather="cool muted northern atmosphere" if any(x in text.lower() for x in ("farm","coast","fjord","outside")) else "interior firelight" if any(x in text.lower() for x in ("inside","hearth","longhouse")) else "neutral muted daylight"
+        if character:
+            shot.subject_placement=placements[index%len(placements)]
+            shot.camera_angle=angles[index%len(angles)]
+            shot.framing={"CHARACTER_CLOSEUP":"CLOSEUP","CHARACTER_WIDE":"MEDIUM_WIDE"}.get(shot.visual_type,"MEDIUM")
+            shot.foreground_elements=shot.objects[:1] or (["wooden bucket and chickens"] if "feed" in text.lower() else [])
+            shot.midground_elements=[shot.action_description]
+            shot.background_elements=shot.historical_story_details[:3]
+            shot.negative_space_direction="left" if "RIGHT" in shot.subject_placement else "right"
+        elif shot.visual_type in {"OBJECT_HERO","OBJECT_COLLECTION","DETAIL","INFO_CARD","MAP"}:
+            shot.subject_placement="CENTERED_OBJECT"; shot.camera_angle="TOP_DOWN_OBJECT" if shot.visual_type in {"OBJECT_COLLECTION","DETAIL","INFO_CARD","MAP"} else "FRONTAL_OBJECT"
+            shot.framing="DETAIL" if shot.visual_type=="DETAIL" else "CLOSEUP"
+            shot.foreground_elements=shot.objects[:5]; shot.midground_elements=[]; shot.background_elements=[]
+        else:
+            shot.subject_placement="SMALL_IN_ENVIRONMENT"; shot.camera_angle="THREE_QUARTER"; shot.framing="ENVIRONMENTAL_WIDE"
+            shot.foreground_elements=shot.historical_story_details[:1]; shot.midground_elements=shot.historical_story_details[1:2]; shot.background_elements=shot.historical_story_details[2:4]
+        for override in overrides:
+            cues=[override.get("next_cue",""),override.get("cue","")]
+            if not any(c and (c in text or SequenceMatcher(None,c.lower(),text.lower()).ratio()>.55) for c in cues): continue
+            if "PLACEMENT" in override: shot.subject_placement=PLACEMENT_ALIASES.get(override["PLACEMENT"].upper(),shot.subject_placement)
+            if "ANGLE" in override: shot.camera_angle=ANGLE_ALIASES.get(override["ANGLE"].upper(),shot.camera_angle)
+            if "FOREGROUND" in override: shot.foreground_elements=[override["FOREGROUND"]]
+            if "BACKGROUND" in override: shot.background_elements=[override["BACKGROUND"]]
+            if "ACTION" in override: shot.action_description=override["ACTION"]
+            if "COMPOSITION" in override: shot.composition=override["COMPOSITION"]
+            break
+        if character and shot.subject_placement=="CENTERED_CHARACTER" and not shot.centered_justification:
+            shot.subject_placement="RIGHT_THIRD" if index%2==0 else "LEFT_THIRD"
+        if character and not shot.action_description.strip(): shot.action_description=_specific_action(text,shot.visual_type)
+        if index>=2:
+            a,b=ordered[index-2],ordered[index-1]
+            if (a.subject_placement,a.camera_angle,a.framing)==(b.subject_placement,b.camera_angle,b.framing)==(shot.subject_placement,shot.camera_angle,shot.framing):
+                shot.subject_placement="LEFT_THIRD" if shot.subject_placement!="LEFT_THIRD" else "RIGHT_THIRD"
+                shot.camera_angle="PROFILE" if shot.camera_angle!="PROFILE" else "THREE_QUARTER"
+                shot.framing="MEDIUM_WIDE" if shot.framing!="MEDIUM_WIDE" else "CLOSEUP"
+        contextual=(len(shot.historical_story_details)>=2 or shot.visual_type in {"OBJECT_HERO","OBJECT_COLLECTION","DETAIL","INFO_CARD","MAP"})
+        specific=not bool(re.fullmatch(r"(?:historical background|viking background|medieval environment|ancient scene)",shot.environment_context.strip(),re.I))
+        action_ok=(not character) or (bool(shot.action_description.strip()) and not bool(re.fullmatch(r"(?:standing|posing|looking|viking farmer)",shot.action_description.strip(),re.I)))
+        relevance=any(word in (" ".join([shot.action_description,shot.environment_context]+shot.objects)).lower() for word in re.findall(r"[a-z]{4,}",text.lower())[:12]) or bool(shot.objects)
+        shot.validation_checks={"ACTION_PRESENT":action_ok,"COMPOSITION_SPECIFIC":specific,"HISTORICAL_CONTEXT":contextual,"THEMATIC_RELEVANCE":relevance,"DIVERSITY_OK":True}
+    return plan
 
 def apply_visual_grammar(plan: ProjectPlan, overrides: list[dict] | None=None) -> ProjectPlan:
     object_types={"OBJECT_HERO","OBJECT_COLLECTION","ENVIRONMENT","INFO_CARD","MAP"}
@@ -179,6 +277,7 @@ Use this locked style at the beginning of every prompt:\n{style}\nUse this negat
                     raise ValueError("Every scene narration_text must be an exact contiguous excerpt from the source narration")
                 plan = normalize_shot_counts(plan, duration)
                 plan = apply_visual_grammar(plan, director_overrides)
+                plan = apply_composition_engine(plan, director_overrides)
                 return finalize_plan_prompts(plan, base_seed, style, negative)
             except (ValueError, ValidationError) as exc:
                 error = str(exc)
@@ -188,6 +287,7 @@ Use this locked style at the beginning of every prompt:\n{style}\nUse this negat
         plan = _deterministic_fallback(script, duration)
         plan = normalize_shot_counts(plan, duration)
         plan = apply_visual_grammar(plan, director_overrides)
+        plan = apply_composition_engine(plan, director_overrides)
         return finalize_plan_prompts(plan, base_seed, style, negative)
 
 def _deterministic_fallback(script: str, duration: int) -> ProjectPlan:
@@ -230,7 +330,7 @@ def build_shot_prompt(shot: Shot, cards: dict[str, CharacterCard], style: str | 
     style = style or STYLE_PROMPT.read_text().strip(); negative = negative or NEGATIVE_PROMPT.read_text().strip()
     identities = "; ".join("CHARACTER CARD: " + _safe_visual_phrase(cards[c].visual_identity) + "; FIXED: " + ", ".join(cards[c].fixed_traits) for c in shot.character_ids if c in cards) if shot.people_count else ""
     props = ", ".join(_safe_visual_phrase(x) for x in shot.historical_props)
-    action = _concrete_visual_beat(shot.action); subject = _concrete_visual_beat(shot.visual_subject); composition = _safe_visual_phrase(shot.composition)
+    action = _safe_visual_phrase(shot.action_description or shot.action); subject = _concrete_visual_beat(shot.visual_subject); composition = _safe_visual_phrase(shot.composition)
     if shot.people_count==0:
         named_objects=", ".join(shot.objects[:5]) or "the historically accurate objects explicitly named in the narration"
         if shot.visual_type in {"OBJECT_HERO","OBJECT_COLLECTION"}:
@@ -243,12 +343,18 @@ def build_shot_prompt(shot: Shot, cards: dict[str, CharacterCard], style: str | 
             action="one tight material or object detail only"
             subject="historically meaningful close detail; no full body"
     if shot.people_count==0: anatomy="NO PEOPLE: no people, no human figures, no hands, no body parts"
-    elif shot.people_count==1: anatomy="exactly one clearly separated adult human figure, simple readable pose, exactly two arms and two legs, anatomically separated limbs, hands visible only if necessary, no overlapping limbs"
-    elif shot.people_count==2: anatomy="exactly two clearly separated adult human figures with visible space between bodies, no merged limbs, no overlapping torsos, simple poses"
+    elif shot.people_count==1: anatomy="exactly one clearly separated adult human figure, clean readable body silhouette, simple natural pose, exactly two arms and two legs, all limbs visually separated, no overlapping limbs, no overlapping legs, hands visible only if necessary, character naturally focused on the activity and not looking at viewer"
+    elif shot.people_count==2: anatomy="exactly two clearly separated adult human figures with visible space between bodies, clean readable silhouettes, no fused torsos, no merged limbs, no overlapping legs, simple natural poses, not looking at viewer"
     else: anatomy="distant simplified background silhouettes only, no interlocked bodies, no detailed hands"
     object_rule = f"OBJECTS: {', '.join(shot.objects[:5])}; isolated large forms, evenly spaced, nothing overlaps" if shot.objects else ""
     final_safety="OBJECTS AND SETTING ONLY; EMPTY OF ALL PEOPLE; do not draw a person, face, hand, arm, leg or human silhouette" if shot.people_count==0 else ""
-    shot.prompt = "; ".join(x for x in [style, f"VISUAL TYPE: {shot.visual_type}", anatomy, identities, object_rule, f"BACKGROUND: {_safe_visual_phrase(shot.background_style)}" if shot.background_style else "", f"ERA DESCRIPTION AND PROPS: {props}" if props else "ERA DESCRIPTION: historically accurate period details", f"LOCATION: {_safe_visual_phrase(shot.location)}", f"ACTION: {action}", f"COMPOSITION: {composition}", f"SHOT-SPECIFIC CONTENT: {subject}", final_safety, "silent visual moment with no depicted dialogue; no speech bubbles; single coherent 16:9 illustration; one clear foreground action; absolutely no writing anywhere; no letters, no numbers, no symbols, no logos; one continuous camera view; no panels, no divisions, no collage, no split screen"] if x)
+    layers=[
+        f"FOREGROUND: {', '.join(shot.foreground_elements[:2])}" if shot.foreground_elements else "",
+        f"MIDGROUND: {', '.join(shot.midground_elements[:2])}" if shot.midground_elements else "",
+        f"BACKGROUND: {', '.join(shot.background_elements[:3])}" if shot.background_elements else (f"BACKGROUND: {_safe_visual_phrase(shot.background_style)}" if shot.background_style else ""),
+    ]
+    history=", ".join(shot.historical_story_details[:4]) or props
+    shot.prompt = "; ".join(x for x in [style, f"VISUAL PURPOSE: {_safe_visual_phrase(shot.visual_purpose)}", f"MAIN SUBJECT: {subject}", f"EXACT ACTION: {action}", f"SUBJECT PLACEMENT: {shot.subject_placement}", f"CAMERA: {shot.camera_angle}, {shot.framing}", *layers, f"ENVIRONMENT: {_safe_visual_phrase(shot.environment_context)}", f"HISTORICAL STORY DETAILS: {history}" if history else "", f"COMPOSITION: {composition}", object_rule, identities, anatomy, final_safety, "silent visual moment with no depicted dialogue; single coherent 16:9 illustration; no text, no letters, no numbers, no symbols, no logos; no collage, no panels, no split screen"] if x)
     shot.negative_prompt = negative; shot.status = "pending"; shot.prompt_hash = None
     return shot
 

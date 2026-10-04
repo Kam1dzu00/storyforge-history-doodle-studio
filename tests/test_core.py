@@ -1,7 +1,7 @@
 from pathlib import Path
 import json
 import pytest
-from history_doodle.planner import target_words, finalize_plan_prompts, normalize_shot_counts, parse_director_tags, apply_visual_grammar, extract_production_script
+from history_doodle.planner import target_words, finalize_plan_prompts, normalize_shot_counts, parse_director_tags, apply_visual_grammar, apply_composition_engine, extract_production_script
 from history_doodle.render import ffmpeg_available, render
 from history_doodle.schemas import CharacterCard, ProjectPlan, Scene, Shot, StorySection, WordStamp
 from history_doodle.storage import ProjectStore
@@ -117,3 +117,55 @@ def test_unknown_director_character_creates_valid_card():
     plan=apply_visual_grammar(plan,[{"cue":"","next_cue":"A farmer wakes.","VISUAL":"CHARACTER","CHARACTER":"main_viking"}])
     assert plan.shots[0].character_ids==["main_viking"]
     assert ProjectPlan.model_validate(plan.model_dump())
+
+def test_optional_composition_tags_are_not_narrated():
+    raw="He repairs a fence.\n[PLACEMENT: LEFT]\n[ANGLE: PROFILE]\n[FOREGROUND: broken rail]\n[ACTION: tying the rail with rope]"
+    spoken,tags=parse_director_tags(raw)
+    assert spoken=="He repairs a fence."
+    assert tags[0]["PLACEMENT"]=="LEFT" and tags[0]["ACTION"]=="tying the rail with rope"
+
+def test_centered_character_without_justification_is_moved():
+    plan=sample_plan(1); shot=plan.shots[0]
+    shot.narration_context="A farmer repairs a fence."; shot.visual_type="CHARACTER_MEDIUM"; shot.subject_placement="CENTERED_CHARACTER"
+    out=apply_composition_engine(plan,[{"cue":"A farmer repairs a fence.","PLACEMENT":"CENTER"}])
+    assert out.shots[0].subject_placement in {"LEFT_THIRD","RIGHT_THIRD"}
+
+def test_character_action_and_historical_details_are_specific():
+    plan=sample_plan(1); shot=plan.shots[0]
+    shot.narration_context="Later, he repairs a broken section of fence."; shot.location="Viking farm"; shot.visual_type="CHARACTER_MEDIUM"
+    out=apply_composition_engine(plan).shots[0]
+    assert "fence" in out.action_description and out.action_description not in {"standing","posing"}
+    assert len(out.historical_story_details)>=2
+
+def test_composition_overrides_win():
+    plan=sample_plan(1); shot=plan.shots[0]
+    shot.narration_context="He repairs a fence."; shot.visual_type="CHARACTER_MEDIUM"
+    out=apply_composition_engine(plan,[{"cue":"He repairs a fence.","PLACEMENT":"LEFT","ANGLE":"PROFILE","ACTION":"tying a broken rail with rope"}]).shots[0]
+    assert out.subject_placement=="LEFT_THIRD" and out.camera_angle=="PROFILE"
+    assert out.action_description=="tying a broken rail with rope"
+
+def test_object_and_environment_shots_have_no_people():
+    plan=sample_plan(2)
+    plan.shots[0].narration_context="His tools are simple: an axe, a sickle and a knife."
+    plan.shots[1].narration_context="Near the coast, a wooden boat needs maintenance too."
+    out=apply_composition_engine(apply_visual_grammar(plan))
+    assert out.shots[0].visual_type=="OBJECT_COLLECTION" and out.shots[0].people_count==0
+    assert out.shots[1].visual_type=="ENVIRONMENT" and out.shots[1].people_count==0
+
+def test_three_identical_compositions_are_broken():
+    plan=sample_plan(3)
+    for shot in plan.shots:
+        shot.narration_context="A farmer works."; shot.visual_type="CHARACTER_MEDIUM"
+    out=apply_composition_engine(plan)
+    triples=[(x.subject_placement,x.camera_angle,x.framing) for x in out.shots]
+    assert len(set(triples))>1
+
+def test_old_manifest_gets_composition_defaults_and_continuity_roundtrip():
+    data=sample_plan(1).model_dump(); shot=data["shots"][0]
+    new_fields=("visual_purpose","subject_placement","camera_angle","framing","foreground_elements","midground_elements","background_elements","environment_context","historical_story_details","action_description","negative_space_direction","centered_justification","continuity_key","time_of_day","weather","validation_checks")
+    for key in new_fields: shot.pop(key)
+    loaded=ProjectPlan.model_validate(data)
+    assert loaded.shots[0].subject_placement=="OFF_CENTER"
+    enriched=apply_composition_engine(loaded)
+    restored=ProjectPlan.model_validate(enriched.model_dump()).shots[0]
+    assert restored.continuity_key=="scene_1" and restored.time_of_day

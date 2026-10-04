@@ -6,6 +6,9 @@ from pydantic import BaseModel, Field, model_validator
 
 Motion = Literal["slow_zoom_in", "slow_zoom_out", "pan_left", "pan_right", "subtle_push", "static"]
 VisualType = Literal["CHARACTER_WIDE", "CHARACTER_MEDIUM", "CHARACTER_CLOSEUP", "OBJECT_HERO", "OBJECT_COLLECTION", "DETAIL", "ENVIRONMENT", "INFO_CARD", "MAP", "COMPARISON", "SILHOUETTE", "GROUP"]
+SubjectPlacement = Literal["LEFT_THIRD","RIGHT_THIRD","LOWER_LEFT","LOWER_RIGHT","FOREGROUND_LEFT","FOREGROUND_RIGHT","SMALL_IN_ENVIRONMENT","OFF_CENTER","CENTERED_OBJECT","CENTERED_CHARACTER"]
+CameraAngle = Literal["EYE_LEVEL","SLIGHT_LOW","SLIGHT_HIGH","THREE_QUARTER","PROFILE","OVER_SHOULDER","TOP_DOWN_OBJECT","FRONTAL_OBJECT"]
+Framing = Literal["WIDE","MEDIUM_WIDE","MEDIUM","CLOSEUP","DETAIL","ENVIRONMENTAL_WIDE"]
 
 class CharacterCard(BaseModel):
     id: str
@@ -41,6 +44,22 @@ class Shot(BaseModel):
     labels: list[str] = Field(default_factory=list)
     background_style: str = ""
     director_override: bool = False
+    visual_purpose: str = "show the concrete narration beat"
+    subject_placement: SubjectPlacement = "OFF_CENTER"
+    camera_angle: CameraAngle = "EYE_LEVEL"
+    framing: Framing = "MEDIUM"
+    foreground_elements: list[str] = Field(default_factory=list)
+    midground_elements: list[str] = Field(default_factory=list)
+    background_elements: list[str] = Field(default_factory=list)
+    environment_context: str = "specific historically appropriate setting"
+    historical_story_details: list[str] = Field(default_factory=list)
+    action_description: str = "performing the concrete action described by the narration"
+    negative_space_direction: str = "opposite the main subject"
+    centered_justification: str = ""
+    continuity_key: str = ""
+    time_of_day: str = ""
+    weather: str = ""
+    validation_checks: dict[str, bool] = Field(default_factory=dict)
 
 class Scene(BaseModel):
     id: str
