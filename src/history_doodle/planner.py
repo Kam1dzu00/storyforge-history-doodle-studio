@@ -15,7 +15,7 @@ def target_words(seconds: int, wpm: int = 158) -> int:
 
 TAG_RE = re.compile(r"^\s*\[(VISUAL|CHARACTER|OBJECTS|LABELS|BACKGROUND|COMPOSITION|PLACEMENT|ANGLE|FOREGROUND|ACTION)\s*:\s*([^]]+)\]\s*$|^\s*\[(NO PEOPLE)\]\s*$", re.I)
 VISUAL_ALIASES={"CHARACTER":"CHARACTER_MEDIUM","CLOSEUP":"CHARACTER_CLOSEUP","OBJECT":"OBJECT_HERO","OBJECT_COLLECTION":"OBJECT_COLLECTION","DETAIL":"DETAIL","ENVIRONMENT":"ENVIRONMENT","INFO":"INFO_CARD","MAP":"MAP","COMPARISON":"COMPARISON"}
-PLACEMENT_ALIASES={"LEFT":"LEFT_THIRD","RIGHT":"RIGHT_THIRD","SMALL_IN_ENVIRONMENT":"SMALL_IN_ENVIRONMENT","LEFT_THIRD":"LEFT_THIRD","RIGHT_THIRD":"RIGHT_THIRD","CENTER":"CENTERED_CHARACTER"}
+PLACEMENT_ALIASES={"LEFT":"LEFT_THIRD","RIGHT":"RIGHT_THIRD","LOWER_LEFT":"LOWER_LEFT","LOWER_RIGHT":"LOWER_RIGHT","FOREGROUND_LEFT":"FOREGROUND_LEFT","FOREGROUND_RIGHT":"FOREGROUND_RIGHT","SMALL_IN_ENVIRONMENT":"SMALL_IN_ENVIRONMENT","LEFT_THIRD":"LEFT_THIRD","RIGHT_THIRD":"RIGHT_THIRD","CENTER":"CENTERED_CHARACTER"}
 ANGLE_ALIASES={"PROFILE":"PROFILE","THREE_QUARTER":"THREE_QUARTER","TOP_DOWN":"TOP_DOWN_OBJECT","OVER_SHOULDER":"OVER_SHOULDER","EYE_LEVEL":"EYE_LEVEL","SLIGHT_LOW":"SLIGHT_LOW","SLIGHT_HIGH":"SLIGHT_HIGH"}
 
 def parse_director_tags(script: str) -> tuple[str,list[dict]]:
@@ -69,6 +69,19 @@ def _auto_visual_type(text: str) -> str:
 def _historical_details(text: str, location: str) -> list[str]:
     details=[]
     groups=[
+        (("modern bathroom","modern shower","private toilet"),["clean ceramic fixtures","glass shower partition","electric lighting"]),
+        (("modern apartment","modern kitchen","smartphone","wi-fi"),["clean painted walls","electric fixtures","contemporary domestic objects"]),
+        (("insula","roman apartment","upper-floor","apartment block"),["Roman brick-and-rubble insula walls","rough lime plaster","timber floor and roof beams","small shuttered window"]),
+        (("roman street","rome is already","commute","cart","market"),["basalt paving stones","raised stone curb","open-front tabernae","terracotta amphorae"]),
+        (("fountain","aqueduct"),["weathered limestone basin","bronze or stone water spout","clay water jugs","gravity-fed Roman waterworks"]),
+        (("latrine","public toilet","parasite"),["communal stone seats","running drainage channel","plain plastered Roman masonry"]),
+        (("bath","strigil","grooming"),["marble-lined bathing pool","hypocaust-warmed chamber","bronze strigil and oil flask"]),
+        (("garum","fish sauce","roman food","breakfast"),["coarse Roman pottery bowl","round scored bread loaf","olives and dried figs","amphora of fermented fish sauce"]),
+        (("vigiles","firefighter","fire","brazier","oil lamp"),["terracotta oil lamp","timber roof beams","soot-darkened Roman plaster","leather fire bucket and iron hook"]),
+        (("forum","merchant","coins","balance scale","transaction"),["bronze balance scale","wax writing tablet and stylus","Roman bronze and silver coins","stone-and-timber shop counter"]),
+        (("workshop","metalworker","bakery","millstone"),["open-front Roman workshop","charcoal brazier","iron hand tools","heavy stone mill"]),
+        (("doctor","physician","medical","medicine","bloodletting"),["bronze Roman medical instruments","small pottery medicine jars","linen bandage roll","wooden examination stool"]),
+        (("night","darkness","lamp","dusk"),["unlit basalt street","small terracotta oil lamp","deep insula doorway shadows"]),
         (("hearth","longhouse","inside","house"),["timber longhouse construction","central hearth with clay vessel","rough wooden bench"]),
         (("farm","animal","chicken","goat","fence"),["rough woven wooden fence","packed-earth farmyard","timber longhouse","stacked split firewood"]),
         (("coast","sea","fjord","boat"),["clinker-built wooden boat","northern coastal landscape","tarred rope and timber planks"]),
@@ -82,7 +95,9 @@ def _historical_details(text: str, location: str) -> list[str]:
         for words,cues in groups:
             if any(x in source for x in words): details.extend(cues)
         if details: break
-    if not details: details=["period-appropriate timber construction","wool and leather everyday materials"]
+    if not details:
+        roman="roman" in (text+" "+location).lower() or "rome" in (text+" "+location).lower()
+        details=(["period-appropriate Roman masonry and timber","wool tunics, leather sandals and terracotta objects"] if roman else ["period-appropriate architecture and everyday materials","historically accurate clothing and hand-made objects"])
     return list(dict.fromkeys(details))[:4]
 
 def _specific_action(text: str, visual_type: str) -> str:
