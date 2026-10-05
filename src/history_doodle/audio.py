@@ -72,8 +72,16 @@ class VoiceEngine:
                 parts = split_sentences(str(segment["text"]))
                 speed = float(segment["speed"])
                 pause_ms = int(segment["pause_after_ms"])
+                silence_ms = int(segment.get("silence_ms", 0))
                 if not 0.5 <= speed <= 1.5 or not 0 <= pause_ms <= 5000:
                     raise ValueError(f"Invalid voice metadata in segment {segment_index}")
+                if not parts:
+                    if not 1 <= silence_ms <= 10000:
+                        raise ValueError(f"Silent segment {segment_index} requires silence_ms")
+                    dest = chunk_dir / f"segment_{segment_index:04d}_silence.wav"
+                    run(["ffmpeg", "-y", "-f", "lavfi", "-i", "anullsrc=r=24000:cl=mono", "-t", f"{silence_ms / 1000:.3f}", str(dest)])
+                    cleaned.append((dest, pause_ms, segment_index))
+                    continue
                 for part_index, text in enumerate(parts, 1):
                     current += 1; progress(current, total)
                     audio_parts = [np.asarray(audio, dtype=np.float32) for _, _, audio in pipeline(text, voice=voice, speed=speed)]

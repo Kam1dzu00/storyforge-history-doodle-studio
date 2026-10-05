@@ -18,6 +18,17 @@ def test_segment_voice_map_must_match_locked_narration(tmp_path, monkeypatch):
         assert "does not exactly match" in str(exc)
     else:
         raise AssertionError("mismatched voice metadata must be rejected")
+
+
+def test_silent_outro_segments_are_accepted_by_locked_text_validation(tmp_path, monkeypatch):
+    from history_doodle.pipeline import Pipeline
+    project = ProjectStore(tmp_path).create("Outro", "script", 60, "am_michael", "Final line.")
+    (project / "voice_segments.json").write_text('[{"text":"Final line.","speed":0.93,"pause_after_ms":0},{"text":"","speed":0.93,"pause_after_ms":0,"silence_ms":1200}]')
+    monkeypatch.setattr("history_doodle.pipeline.VoiceEngine.generate_segments", lambda *args, **kwargs: project / "audio/narration.wav")
+    monkeypatch.setattr("history_doodle.pipeline.TimestampEngine.transcribe", lambda *args, **kwargs: [])
+    monkeypatch.setattr("history_doodle.pipeline.quality_report", lambda *args, **kwargs: {})
+    with pytest.raises(FileNotFoundError):
+        Pipeline(project).generate_voice()
 from history_doodle.subtitles import chunks
 from history_doodle.timing import allocate_timeline, validate_word_timestamps
 from history_doodle.util import prompt_hash, shot_seed

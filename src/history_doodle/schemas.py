@@ -114,6 +114,13 @@ class ProjectState(BaseModel):
     background_music_duck_db: float = 6.0
     background_music_fade_in: float = 2.0
     background_music_fade_out: float = 5.0
+    outro_enabled: bool = False
+    outro_image_path: str | None = None
+    pause_before_outro_ms: int = 1000
+    outro_voice_mode: str = "OUTRO"
+    outro_speed: float = 0.93
+    outro_hold_after_ms: int = 1200
+    outro_fade_to_black_ms: int = 700
     script_status: str = "pending"
     planning_status: str = "pending"
     voice_status: str = "pending"
