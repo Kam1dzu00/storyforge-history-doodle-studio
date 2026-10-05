@@ -80,7 +80,10 @@ class VoiceEngine:
                         raise ValueError(f"Silent segment {segment_index} requires silence_ms")
                     dest = chunk_dir / f"segment_{segment_index:04d}_silence.wav"
                     run(["ffmpeg", "-y", "-f", "lavfi", "-i", "anullsrc=r=24000:cl=mono", "-t", f"{silence_ms / 1000:.3f}", str(dest)])
-                    cleaned.append((dest, pause_ms, segment_index))
+                    # The silent clip already is the requested pause. Applying
+                    # pause_after_ms as well would double explicit black/outro
+                    # holds (for example, 1000 ms becomes 2000 ms).
+                    cleaned.append((dest, 0, segment_index))
                     continue
                 for part_index, text in enumerate(parts, 1):
                     current += 1; progress(current, total)

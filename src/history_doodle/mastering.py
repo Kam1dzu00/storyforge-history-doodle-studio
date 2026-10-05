@@ -48,7 +48,10 @@ def master_background_music(project: Path, state: ProjectState) -> tuple[Path, P
     no_music = render_dir / "final_video_no_music.mp4"
     if not final.exists() and not no_music.exists():
         raise FileNotFoundError("Completed final_video.mp4 is required before audio mastering")
-    if not no_music.exists():
+    # A corrected render must replace the previous no-music master before the
+    # music-only remux. Keeping an older file here would silently reintroduce
+    # stale timing or subtitles into the final deliverable.
+    if final.exists():
         shutil.copy2(final, no_music)
 
     duration = probe_duration(no_music)
