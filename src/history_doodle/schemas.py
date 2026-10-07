@@ -68,6 +68,9 @@ class Shot(BaseModel):
     host_pose: str | None = None
     host_role: str | None = None
     routing_source: Literal["auto", "manual"] = "auto"
+    image_versions: list[dict] = Field(default_factory=list)
+    approved: bool = False
+    generated_at: str | None = None
 
 class Scene(BaseModel):
     id: str
@@ -123,6 +126,12 @@ class ProjectState(BaseModel):
     host_character_id: str | None = None
     semantic_visual_routing: bool = True
     full_bleed_frames: bool | None = None
+    workflow_mode: Literal["guided", "advanced"] = "guided"
+    auto_rebuild_after_approval: bool = True
+    shot_version_limit: int = Field(default=4, ge=1, le=10)
+    voice_preset: Literal["energetic_explainer", "friendly_documentary", "calm_history"] = "calm_history"
+    speech_speed: float = Field(default=1.03, ge=0.75, le=1.25)
+    music_profile: Literal["HISTORICAL_AMBIENCE", "BRIGHT_FACTS"] = "HISTORICAL_AMBIENCE"
     background_music: str | None = None
     background_music_enabled: bool = False
     background_music_mode: Literal["user_file", "procedural"] = "procedural"

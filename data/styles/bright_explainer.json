@@ -1,0 +1,70 @@
+{
+  "style_id": "bright_explainer",
+  "display_name": "Bright Explainer",
+  "description": "Bright, punchy, full-frame cartoon explainer with literal visuals, bold outlines, controlled text, and mobile-first readability.",
+  "compatibility_version": 2,
+  "aspect_ratio_default": "16:9",
+  "full_bleed_required": true,
+  "text_in_image_allowed": true,
+  "style_board_path": "reference_assets/v2_style_lock_bright_explainer.png",
+  "visual_identity": [
+    "modern high-energy comic explainer",
+    "thick clean dark outlines",
+    "flat plus soft cel shading",
+    "bold simplified shapes",
+    "strong readable silhouettes",
+    "saturated controlled blue yellow red and cream palette"
+  ],
+  "composition_rules": [
+    "full-screen edge-to-edge 16:9 frame",
+    "one instantly readable visual idea",
+    "semantically literal before metaphorical",
+    "dynamic shot variety",
+    "large mobile-readable subjects",
+    "short text headings only when useful"
+  ],
+  "camera_rules": [
+    "alternate wide medium close-up object and comparison compositions",
+    "avoid three identical centered frames in a row",
+    "use object hero close-up when narration names an object"
+  ],
+  "background_rules": [
+    "complete environment with no white outer border",
+    "support the focal subject without clutter",
+    "no poster floating on a page"
+  ],
+  "positive_prompt_keywords": [
+    "bright cartoon YouTube explainer",
+    "full-bleed widescreen scene",
+    "clean thick outlines",
+    "expressive readable acting",
+    "high contrast educational comic",
+    "meme energy but polished"
+  ],
+  "negative_prompt_keywords": [
+    "white border",
+    "white page",
+    "blank margins",
+    "floating card",
+    "muddy colors",
+    "painterly realism",
+    "glossy 3D",
+    "tiny unreadable detail",
+    "irrelevant people",
+    "extra limbs",
+    "fused hands"
+  ],
+  "default_shot_priorities": [
+    "hook_title_card",
+    "environment_wide",
+    "character_reaction",
+    "object_single",
+    "process_sequence",
+    "comparison_split",
+    "fact_card",
+    "crowd_chaos",
+    "closing_cta"
+  ],
+  "subtitle_theme": "bold_mobile",
+  "cta_style": "large bold integrated end card"
+}

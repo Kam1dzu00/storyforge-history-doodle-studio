@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-import argparse, json, sys, time
+import argparse, json, shutil, sys, time
+from datetime import datetime, timezone
 from pathlib import Path
 from .config import STYLE_REFERENCE, configure_model_cache
 from .schemas import ProjectPlan
@@ -27,6 +28,14 @@ def generation_kwargs(state, shot, prompt: str, references: list[Path], attempt:
         kwargs["image_strength"] = 0.20
     return kwargs
 
+
+def backup_current_version(project: Path, shot, target: Path) -> dict | None:
+    if not target.exists(): return None
+    version_dir=project/"images/versions"; version_dir.mkdir(parents=True,exist_ok=True)
+    number=max([int(x.get("version",0)) for x in shot.image_versions]+[0])+1
+    backup=version_dir/f"shot_{shot.order:03d}_v{number}.png"; shutil.copy2(target,backup)
+    return {"version":number,"image_path":str(backup.relative_to(project)),"seed":shot.seed,"prompt":shot.prompt,"created_at":datetime.now(timezone.utc).isoformat(),"approved":shot.approved}
+
 def generate(project: Path, only: str | None = None, new_seed: bool = False) -> None:
     configure_model_cache()
     store = ProjectStore(); plan = store.load_plan(project); state = store.load_state(project)
@@ -50,6 +59,8 @@ def generate(project: Path, only: str | None = None, new_seed: bool = False) -> 
     timings=[]; stage_started=time.time()
     for index, shot in enumerate(shots, 1):
         shot_started=time.time()
+        old_status, old_image_path, old_seed = shot.status, shot.image_path, shot.seed
+        pending_version = None
         references = [STYLE_REFERENCE] if use_reference else []
         if not legacy:
             positive, negative, references = composer.compose(state, shot, require_references=True)
@@ -61,6 +72,8 @@ def generate(project: Path, only: str | None = None, new_seed: bool = False) -> 
         if only is None and not new_seed and shot.status == "complete" and target.exists() and shot.prompt_hash == digest:
             print(json.dumps({"event":"skip", "index":index, "total":len(shots), "shot":shot.id}), flush=True); continue
         if new_seed: shot.seed = (shot.seed + 7919) % 2_147_483_647
+        if only is not None and target.exists():
+            pending_version=backup_current_version(project,shot,target); pending_version["seed"]=old_seed
         shot.status = "generating"; store.save_plan(project, plan)
         wants_edit = bool(references)
         if model is None or model_is_edit != wants_edit:
@@ -77,12 +90,21 @@ def generate(project: Path, only: str | None = None, new_seed: bool = False) -> 
                 if attempt == 2:
                     prompt = f"{shot.prompt}. Simplify minor background detail but preserve every locked style and character constraint."
                 kwargs = generation_kwargs(state, shot, prompt, references, attempt)
-                result = model.generate_image(**kwargs); result.save(target, overwrite=True)
-                shot.image_path = str(target.relative_to(project)); shot.prompt_hash = digest; shot.status = "complete"; error = None; break
+                output_target=target.with_suffix(".pending.png") if only is not None else target
+                result = model.generate_image(**kwargs); result.save(output_target, overwrite=True)
+                if output_target != target: output_target.replace(target)
+                if pending_version:
+                    shot.image_versions.append(pending_version)
+                    while len(shot.image_versions)>state.shot_version_limit:
+                        removed=shot.image_versions.pop(0); (project/removed["image_path"]).unlink(missing_ok=True)
+                shot.image_path = str(target.relative_to(project)); shot.prompt_hash = digest; shot.status = "complete"; shot.approved=False; shot.generated_at=datetime.now(timezone.utc).isoformat(); error = None; break
             except Exception as exc:
                 error = exc; shot.seed = (shot.seed + 1009) % 2_147_483_647
         if error:
-            shot.status = "failed"; store.save_plan(project, plan); print(json.dumps({"event":"failed", "shot":shot.id, "error":str(error)}), flush=True); continue
+            target.with_suffix(".pending.png").unlink(missing_ok=True)
+            if pending_version:
+                (project / pending_version["image_path"]).unlink(missing_ok=True)
+            shot.status = old_status; shot.image_path = old_image_path; store.save_plan(project, plan); print(json.dumps({"event":"failed", "shot":shot.id, "error":str(error)}), flush=True); continue
         store.save_plan(project, plan)
         audit = {
             "shot_id": shot.id, "style_id": state.style_mode or LEGACY_STYLE_ID,

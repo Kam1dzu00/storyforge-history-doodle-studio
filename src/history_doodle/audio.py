@@ -22,7 +22,7 @@ def split_sentences(text: str, max_chars: int = 350) -> list[str]:
     return out
 
 class VoiceEngine:
-    def generate(self, script: str, out_dir: Path, voice: str, progress=lambda *_: None) -> Path:
+    def generate(self, script: str, out_dir: Path, voice: str, progress=lambda *_: None, speed: float = 1.03) -> Path:
         from kokoro import KPipeline
         chunks = split_sentences(script); chunk_dir = out_dir / "chunks"; chunk_dir.mkdir(parents=True, exist_ok=True)
         pipeline = KPipeline(lang_code="a")
@@ -30,7 +30,7 @@ class VoiceEngine:
         try:
             for i, text in enumerate(chunks, 1):
                 progress(i, len(chunks))
-                audio_parts = [np.asarray(audio, dtype=np.float32) for _, _, audio in pipeline(text, voice=voice, speed=1.03)]
+                audio_parts = [np.asarray(audio, dtype=np.float32) for _, _, audio in pipeline(text, voice=voice, speed=speed)]
                 if not audio_parts: raise RuntimeError(f"Kokoro produced no audio for chunk {i}")
                 raw = chunk_dir / f"raw_{i:04d}.wav"; dest = chunk_dir / f"chunk_{i:04d}.wav"
                 sf.write(raw, np.concatenate(audio_parts), 24000)
@@ -53,6 +53,17 @@ class VoiceEngine:
         run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", str(concat), "-af", master, "-ar", "48000", "-ac", "1", str(wav)])
         run(["ffmpeg", "-y", "-i", str(wav), "-c:a", "aac", "-b:a", "192k", str(out_dir / "narration.m4a")])
         return wav
+
+    def preview(self, text: str, output: Path, voice: str, speed: float = 1.03) -> Path:
+        from kokoro import KPipeline
+        output.parent.mkdir(parents=True,exist_ok=True); pipeline=KPipeline(lang_code="a")
+        try:
+            parts=[np.asarray(audio,dtype=np.float32) for _,_,audio in pipeline(text,voice=voice,speed=speed)]
+            if not parts: raise RuntimeError("Kokoro produced no preview audio")
+            sf.write(output,np.concatenate(parts),24000)
+        finally:
+            del pipeline; cleanup_models()
+        return output
 
     def generate_segments(self, segments: list[dict], out_dir: Path, voice: str, progress=lambda *_: None) -> Path:
         """Generate narration with per-segment Kokoro speed and explicit pauses.

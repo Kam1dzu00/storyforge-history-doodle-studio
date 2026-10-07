@@ -60,7 +60,7 @@ class Pipeline:
                 raise ValueError("Voice segment text does not exactly match locked narration")
             wav = VoiceEngine().generate_segments(segments, self.project/"audio", self.state.voice, lambda i,n:self.event(f"Озвучиваю фрагмент {i} из {n}…"))
         else:
-            wav = VoiceEngine().generate(script, self.project/"audio", self.state.voice, lambda i,n:self.event(f"Озвучиваю фрагмент {i} из {n}…"))
+            wav = VoiceEngine().generate(script, self.project/"audio", self.state.voice, lambda i,n:self.event(f"Озвучиваю фрагмент {i} из {n}…"), self.state.speech_speed)
         self.metrics["voice_generation_seconds"]=round(time.time()-started,2)
         self.state.voice_status="complete"; self._save(); self.event("Синхронизирую слова с аудио…")
         started=time.time()
@@ -103,7 +103,40 @@ class Pipeline:
         self.metrics["image_stage_seconds"]=round(time.time()-started,2)
         plan=self.store.load_plan(self.project)
         self.state.images_status="complete" if all(x.status=="complete" for x in plan.shots) else "stale"
+        if only: self.state.render_status="stale"
         self._save()
+
+    def preview_voice(self):
+        sample="Here is the surprising part: the obvious explanation is not always the correct one. Let us see what really happened."
+        return VoiceEngine().preview(sample,self.project/"audio/voice_preview.wav",self.state.voice,self.state.speech_speed)
+
+    def restore_previous_shot(self, shot_id: str):
+        plan=self.store.load_plan(self.project); shot=next(x for x in plan.shots if x.id==shot_id)
+        if not shot.image_versions: raise RuntimeError("No previous frame version is available")
+        previous=shot.image_versions.pop(); target=self.project/"images"/f"shot_{shot.order:03d}.png"
+        restored_seed=int(previous.get("seed",shot.seed)); restored_prompt=str(previous.get("prompt",shot.prompt)); restored_approved=bool(previous.get("approved",False))
+        if not (self.project/previous["image_path"]).exists(): raise FileNotFoundError(previous["image_path"])
+        current=target.with_suffix(".restore-backup.png")
+        if target.exists(): shutil.copy2(target,current)
+        shutil.copy2(self.project/previous["image_path"],target)
+        if current.exists():
+            shutil.copy2(current,self.project/previous["image_path"]); current.unlink()
+            previous.update({"seed":shot.seed,"prompt":shot.prompt,"created_at":time.strftime("%Y-%m-%dT%H:%M:%SZ",time.gmtime()),"approved":shot.approved})
+            shot.image_versions.append(previous)
+        shot.seed=restored_seed; shot.prompt=restored_prompt; shot.image_path=str(target.relative_to(self.project)); shot.status="complete"; shot.approved=restored_approved
+        self.store.save_plan(self.project,plan); self.state.render_status="stale"; self._save(); return target
+
+    def approve_shot(self, shot_id: str):
+        plan=self.store.load_plan(self.project); shot=next(x for x in plan.shots if x.id==shot_id); shot.approved=True
+        self.store.save_plan(self.project,plan)
+        return self.rebuild_final_video() if self.state.auto_rebuild_after_approval else shot.image_path
+
+    def rebuild_final_video(self):
+        final=self.project/"render/final_video.mp4"
+        if final.exists():
+            backups=self.project/"render/backups"; backups.mkdir(parents=True,exist_ok=True)
+            shutil.copy2(final,backups/f"final_video_{time.strftime('%Y%m%d_%H%M%S')}.mp4")
+        return self.render_video()
 
     def build_subtitles(self):
         words = [WordStamp.model_validate(x) for x in json.loads((self.project/"audio/word_timestamps.json").read_text())]

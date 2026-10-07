@@ -178,6 +178,9 @@ class PromptComposer:
         elif shot.people_count == 0:
             prompt += "\nOUTPUT DISCIPLINE: object/concept only; absolutely no person, face, body, hand, presenter, or host."
             negative += ", person, people, human, face, body, hand, presenter, host"
+        if style["style_id"] == "bright_explainer" and not shot.labels:
+            prompt += "\nTEXT SAFETY: no generated words, letters, captions, speech bubbles, signs, or typography; subtitles and titles are added later by the deterministic video renderer."
+            negative += ", text, letters, words, captions, speech bubble, sign, typography, gibberish"
         if style.get("full_bleed_required"): negative += ", " + ", ".join(FULL_BLEED_EXCLUSIONS)
         return prompt, negative, refs
 

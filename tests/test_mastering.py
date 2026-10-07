@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from history_doodle.mastering import generate_procedural_ambience, master_background_music, probe_duration
+from history_doodle.mastering import generate_bright_facts_bed, generate_procedural_ambience, master_background_music, probe_duration
 from history_doodle.render import probe
 from history_doodle.schemas import ProjectState
 from history_doodle.util import run
@@ -33,6 +33,16 @@ def test_procedural_music_duration_and_fades(tmp_path):
     assert probe_duration(out) == pytest.approx(2.0, abs=.03)
     info = probe(out); audio = next(x for x in info["streams"] if x["codec_type"] == "audio")
     assert audio["sample_rate"] == "48000" and audio["channels"] == 2
+
+
+def test_bright_facts_profile_is_distinct_and_reported(tmp_path):
+    out=generate_bright_facts_bed(tmp_path/"bright.wav",2.0,.2,.4)
+    assert probe_duration(out)==pytest.approx(2.0,abs=.03)
+    make_media(tmp_path/"project")
+    master_background_music(tmp_path/"project",state(background_music_enabled=True,music_profile="BRIGHT_FACTS",background_music_fade_in=.2,background_music_fade_out=.4))
+    import json
+    report=json.loads((tmp_path/"project/logs/audio_mastering.json").read_text())
+    assert report["profile"]=="BRIGHT_FACTS" and report["music_target_lufs"]==-23 and report["duck_release_ms"]==700
 
 
 def test_music_master_preserves_original_and_copies_video(tmp_path):

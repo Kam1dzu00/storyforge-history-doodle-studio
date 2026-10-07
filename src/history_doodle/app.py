@@ -4,7 +4,7 @@ import json, logging, os, shutil, sys, time
 from pathlib import Path
 from PySide6.QtCore import QObject, QSize, QThread, Signal, Qt, QUrl, QTimer
 from PySide6.QtGui import QDesktopServices, QIcon, QPixmap
-from PySide6.QtWidgets import QApplication, QCheckBox, QComboBox, QFileDialog, QFormLayout, QFrame, QHBoxLayout, QLabel, QLineEdit, QListWidget, QListWidgetItem, QMainWindow, QMessageBox, QProgressBar, QPushButton, QScrollArea, QSpinBox, QSplitter, QTabWidget, QTextEdit, QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QApplication, QCheckBox, QComboBox, QDoubleSpinBox, QFileDialog, QFormLayout, QFrame, QHBoxLayout, QLabel, QLineEdit, QListWidget, QListWidgetItem, QMainWindow, QMessageBox, QProgressBar, QPushButton, QScrollArea, QSpinBox, QSplitter, QTabWidget, QTextEdit, QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget
 from .config import DEFAULT_VOICE, LOGS_DIR, PROJECTS_DIR, ROOT, STYLE_REFERENCE, VOICES, ensure_dirs
 from .health import check
 from .pipeline import Pipeline
@@ -48,7 +48,15 @@ class Window(QMainWindow):
         self.title=QLineEdit(); self.title.setPlaceholderText("Название ролика, например: Чем викинги занимались весь день?"); self.title.setObjectName("titleInput"); cv.addWidget(self.title)
         self.tabs=QTabWidget(); self.tabs.setObjectName("inputTabs"); self.brief=QTextEdit(); self.brief.setPlaceholderText("Опишите тему, тон, важные факты и для кого этот ролик…"); self.script=QTextEdit(); self.script.setPlaceholderText("Вставьте готовый английский текст рассказчика…"); self.tabs.addTab(self.brief,"У меня есть идея"); self.tabs.addTab(self.script,"У меня есть сценарий"); cv.addWidget(self.tabs,3)
         settings=QFrame(); settings.setObjectName("card"); form=QFormLayout(settings); form.setContentsMargins(18,16,18,16); form.setSpacing(12)
-        self.duration=QSpinBox(); self.duration.setRange(1,60); self.duration.setValue(10); self.duration.setSuffix(" мин"); self.voice=QComboBox(); self.voice.addItems(VOICES); self.music=QLineEdit(); self.music.setPlaceholderText("Необязательно — оставьте пустым для одной озвучки"); music_btn=QPushButton("Выбрать"); music_btn.setObjectName("quiet"); music_btn.clicked.connect(self.choose_music); row=QHBoxLayout(); row.addWidget(self.music); row.addWidget(music_btn)
+        self.duration=QSpinBox(); self.duration.setRange(1,60); self.duration.setValue(10); self.duration.setSuffix(" мин"); self.voice=QComboBox(); self.voice.addItems(VOICES)
+        self.voice_preset=QComboBox(); self.voice_preset.addItem("Energetic Explainer","energetic_explainer"); self.voice_preset.addItem("Friendly Documentary","friendly_documentary"); self.voice_preset.addItem("Calm History","calm_history")
+        self.speech_speed=QDoubleSpinBox(); self.speech_speed.setRange(.75,1.25); self.speech_speed.setSingleStep(.01); self.speech_speed.setValue(1.03)
+        voice_preview=QPushButton("▶ Preview"); voice_preview.setObjectName("quiet"); voice_preview.clicked.connect(self.preview_voice)
+        voice_row=QHBoxLayout(); voice_row.addWidget(self.voice); voice_row.addWidget(voice_preview)
+        self.music=QLineEdit(); self.music.setPlaceholderText("Необязательно — оставьте пустым для процедурной музыки"); music_btn=QPushButton("Выбрать"); music_btn.setObjectName("quiet"); music_btn.clicked.connect(self.choose_music); row=QHBoxLayout(); row.addWidget(self.music); row.addWidget(music_btn)
+        self.music_profile=QComboBox(); self.music_profile.addItem("Historical Ambience","HISTORICAL_AMBIENCE"); self.music_profile.addItem("Bright Facts","BRIGHT_FACTS")
+        self.workflow_mode=QComboBox(); self.workflow_mode.addItem("Guided","guided"); self.workflow_mode.addItem("Advanced","advanced"); self.workflow_mode.currentIndexChanged.connect(self.update_workflow_mode)
+        self.auto_rebuild=QCheckBox("Автоматически обновлять видео после одобрения"); self.auto_rebuild.setChecked(True)
         self.style_mode=QComboBox()
         for profile in self.styles.list_styles(): self.style_mode.addItem(profile["display_name"],profile["style_id"])
         self.style_description=QLabel(""); self.style_description.setWordWrap(True); self.style_description.setObjectName("muted")
@@ -61,11 +69,11 @@ class Window(QMainWindow):
         set_stylized=QPushButton("Задать стилизованный референс"); set_stylized.setObjectName("quiet"); set_stylized.clicked.connect(self.set_stylized_host_reference)
         ref_buttons=QHBoxLayout(); ref_buttons.addWidget(set_real); ref_buttons.addWidget(set_stylized)
         self.style_mode.currentIndexChanged.connect(self.update_visual_identity_preview); self.host_enabled.toggled.connect(self.update_visual_identity_preview); self.host_character.currentIndexChanged.connect(self.update_visual_identity_preview)
-        form.addRow("Длительность",self.duration); form.addRow("Голос рассказчика",self.voice); form.addRow("Фоновая музыка",row); form.addRow("Стиль",self.style_mode); form.addRow("Описание стиля",self.style_description); form.addRow("Превью",self.style_preview); form.addRow("Постоянный ведущий",self.host_enabled); form.addRow("Персонаж",self.host_character); form.addRow("Статус референсов",self.reference_status); form.addRow("Референсы",ref_buttons); cv.addWidget(settings)
+        form.addRow("Режим",self.workflow_mode); form.addRow("Длительность",self.duration); form.addRow("Голос рассказчика",voice_row); form.addRow("Пресет голоса",self.voice_preset); form.addRow("Скорость",self.speech_speed); form.addRow("Фоновая музыка",row); form.addRow("Музыкальный профиль",self.music_profile); form.addRow("Стиль",self.style_mode); form.addRow("Описание стиля",self.style_description); form.addRow("Превью",self.style_preview); form.addRow("Постоянный ведущий",self.host_enabled); form.addRow("Персонаж",self.host_character); form.addRow("Статус референсов",self.reference_status); form.addRow("Референсы",ref_buttons); form.addRow("После одобрения",self.auto_rebuild); cv.addWidget(settings)
         self.update_visual_identity_preview()
         self.primary=QPushButton("Создать готовое видео — весь процесс"); self.primary.setObjectName("primary"); self.primary.clicked.connect(self.run_next); cv.addWidget(self.primary)
         self.cancel_button=QPushButton("Отменить безопасно"); self.cancel_button.setObjectName("quiet"); self.cancel_button.clicked.connect(self.cancel_job); self.cancel_button.hide(); cv.addWidget(self.cancel_button)
-        advanced=QFrame(); advanced.setObjectName("card"); av=QVBoxLayout(advanced); av.addWidget(QLabel("Ручное управление этапами")); buttons=QHBoxLayout(); self.stage_buttons=[]
+        advanced=QFrame(); self.advanced_panel=advanced; advanced.setObjectName("card"); av=QVBoxLayout(advanced); av.addWidget(QLabel("Ручное управление этапами")); buttons=QHBoxLayout(); self.stage_buttons=[]
         for text,stage in [("Сценарий","create_script"),("Раскадровка","plan_video"),("Озвучка","generate_voice"),("Картинки","generate_images"),("Субтитры","build_subtitles"),("Сборка","render_video")]:
             b=QPushButton(text); b.setObjectName("quiet"); b.clicked.connect(lambda _,s=stage:self.run_stage(s)); buttons.addWidget(b); self.stage_buttons.append(b)
         av.addLayout(buttons); rebuild=QPushButton("Пересобрать раскадровку после изменения сценария"); rebuild.setObjectName("quiet"); rebuild.clicked.connect(self.rebuild_scenes); av.addWidget(rebuild); cv.addWidget(advanced)
@@ -89,13 +97,15 @@ class Window(QMainWindow):
         self.composition_edit=QLineEdit(); self.historical_details=QLabel(""); self.historical_details.setWordWrap(True); self.historical_details.setObjectName("muted")
         df.addRow("Задача кадра",self.visual_purpose); df.addRow("Действие",self.action_edit); df.addRow("Позиция",self.placement_edit); df.addRow("Ракурс",self.angle_edit); df.addRow("Крупность",self.framing_edit); df.addRow("Композиция",self.composition_edit); df.addRow("Исторические детали",self.historical_details)
         self.visual_category_edit=QComboBox(); self.visual_category_edit.addItems(["host_hook","host_reaction","host_explaining","object_single","object_collection","infographic_metric","medical_diagram","environment_wide","process_sequence","comparison_split","symbol_metaphor"])
-        self.visual_focus_edit=QLineEdit(); self.routing_source_edit=QComboBox(); self.routing_source_edit.addItems(["auto","manual"]); self.host_present_edit=QCheckBox(); self.host_role_edit=QLineEdit(); self.host_expression_edit=QLineEdit(); self.host_pose_edit=QLineEdit()
-        df.addRow("Visual category",self.visual_category_edit); df.addRow("Visual focus",self.visual_focus_edit); df.addRow("Routing",self.routing_source_edit); df.addRow("Host present",self.host_present_edit); df.addRow("Host role",self.host_role_edit); df.addRow("Host expression",self.host_expression_edit); df.addRow("Host pose",self.host_pose_edit)
+        self.visual_focus_edit=QLineEdit(); self.routing_source_edit=QComboBox(); self.routing_source_edit.addItems(["auto","manual"]); self.host_present_edit=QCheckBox(); self.host_role_edit=QLineEdit(); self.host_expression_edit=QLineEdit(); self.host_pose_edit=QLineEdit(); self.seed_edit=QSpinBox(); self.seed_edit.setRange(0,2147483647); self.version_status=QLabel(""); self.version_status.setObjectName("muted")
+        df.addRow("Visual category",self.visual_category_edit); df.addRow("Visual focus",self.visual_focus_edit); df.addRow("Routing",self.routing_source_edit); df.addRow("Seed",self.seed_edit); df.addRow("Versions",self.version_status); df.addRow("Host present",self.host_present_edit); df.addRow("Host role",self.host_role_edit); df.addRow("Host expression",self.host_expression_edit); df.addRow("Host pose",self.host_pose_edit)
         rv.addWidget(direction)
         rebuild_prompt=QPushButton("Пересобрать промпт выбранного кадра"); rebuild_prompt.setObjectName("quiet"); rebuild_prompt.clicked.connect(self.rebuild_shot_prompt); rv.addWidget(rebuild_prompt)
         self.details=QTextEdit(); self.details.setPlaceholderText("Выберите сцену или кадр, чтобы посмотреть и изменить описание."); rv.addWidget(self.details,1)
         save=QPushButton("Сохранить описание кадра"); save.setObjectName("quiet"); save.clicked.connect(self.save_prompt); rv.addWidget(save)
         actions=QHBoxLayout(); same=QPushButton("Повторить точно"); same.setToolTip("Сгенерировать кадр повторно с тем же числом случайности"); same.setObjectName("quiet"); same.clicked.connect(lambda:self.regen(False)); regen=QPushButton("Новый вариант"); regen.clicked.connect(lambda:self.regen(True)); actions.addWidget(same); actions.addWidget(regen); rv.addLayout(actions)
+        review_actions=QHBoxLayout(); previous=QPushButton("←"); previous.clicked.connect(lambda:self.navigate_shot(-1)); approve=QPushButton("Одобрить"); approve.clicked.connect(self.approve_current_shot); restore=QPushButton("Восстановить"); restore.setObjectName("quiet"); restore.clicked.connect(self.restore_previous_shot); next_shot=QPushButton("→"); next_shot.clicked.connect(lambda:self.navigate_shot(1)); review_actions.addWidget(previous); review_actions.addWidget(approve); review_actions.addWidget(restore); review_actions.addWidget(next_shot); rv.addLayout(review_actions)
+        update_video=QPushButton("Обновить финальное видео"); update_video.setObjectName("secondary"); update_video.clicked.connect(lambda:self.run_stage("rebuild_final_video")); rv.addWidget(update_video)
         shot_actions=QHBoxLayout(); open_image=QPushButton("Открыть изображение"); open_image.setObjectName("quiet"); open_image.clicked.connect(self.open_image); preview_scene=QPushButton("Превью сцены"); preview_scene.setObjectName("quiet"); preview_scene.clicked.connect(self.preview_selected_scene); shot_actions.addWidget(open_image); shot_actions.addWidget(preview_scene); rv.addLayout(shot_actions)
         openv=QPushButton("▶  Открыть готовое видео"); openv.setObjectName("secondary"); openv.clicked.connect(self.open_video); rv.addWidget(openv)
         tools=QHBoxLayout(); finder=QPushButton("Показать файлы"); finder.setObjectName("quiet"); finder.clicked.connect(self.show_finder); style=QPushButton("Референс стиля"); style.setObjectName("quiet"); style.clicked.connect(self.replace_style_reference); tools.addWidget(finder); tools.addWidget(style); rv.addLayout(tools); split.addWidget(right_scroll); split.setSizes([235,780,425]); split.setCollapsible(0,False); split.setCollapsible(1,False)
@@ -110,6 +120,7 @@ class Window(QMainWindow):
             QPushButton{min-height:40px;background:#222b35;border:1px solid #384553;border-radius:10px;padding:0 14px;font-weight:600} QPushButton:hover{background:#2b3743;border-color:#536273} QPushButton:pressed{background:#1d252e;padding-top:1px} QPushButton#primary{min-height:54px;background:#d79847;border-color:#e4aa5d;color:#17120b;font-size:16px;font-weight:800} QPushButton#primary:hover{background:#e5a753} QPushButton#secondary{background:#243241;border-color:#3b5066} QPushButton#quiet{background:transparent;color:#aeb8c5;border-color:#2c3641}
             QLabel#preview{background:#0b0f14;border:1px solid #303b48;border-radius:12px;color:#687586;padding:8px} QProgressBar{background:#1a2028;border:0;border-radius:2px} QProgressBar::chunk{background:#d79847;border-radius:2px} QSplitter::handle{background:#232b35}
         """)
+        self.update_workflow_mode()
 
     def refresh_projects(self):
         self.projects.clear();
@@ -127,6 +138,7 @@ class Window(QMainWindow):
     def load_project(self):
         if not self.project:return
         state=self.store.load_state(self.project); self.title.setText(state.title); self.duration.setValue(state.target_duration_seconds//60); self.voice.setCurrentText(state.voice); self.music.setText(state.background_music or "")
+        self.voice_preset.setCurrentIndex(max(0,self.voice_preset.findData(state.voice_preset))); self.speech_speed.setValue(state.speech_speed); self.music_profile.setCurrentIndex(max(0,self.music_profile.findData(state.music_profile))); self.workflow_mode.setCurrentIndex(max(0,self.workflow_mode.findData(state.workflow_mode))); self.auto_rebuild.setChecked(state.auto_rebuild_after_approval)
         style_id=state.style_mode or LEGACY_STYLE_ID; index=self.style_mode.findData(style_id)
         if index>=0: self.style_mode.setCurrentIndex(index)
         self.host_enabled.setChecked(state.host_enabled)
@@ -163,7 +175,7 @@ class Window(QMainWindow):
     def _ensure(self):
         if not self.project:self.new_project()
         if not self.project:raise RuntimeError("Создайте или выберите проект")
-        state=self.store.load_state(self.project); previous=(state.style_mode,state.host_enabled,state.host_character_id); state.voice=self.voice.currentText(); state.background_music=self.music.text().strip() or None; self._apply_visual_settings(state)
+        state=self.store.load_state(self.project); previous=(state.style_mode,state.host_enabled,state.host_character_id); state.voice=self.voice.currentText(); state.voice_preset=self.voice_preset.currentData(); state.speech_speed=self.speech_speed.value(); state.background_music=self.music.text().strip() or None; state.music_profile=self.music_profile.currentData(); state.background_music_enabled=bool(state.background_music or state.music_profile=="BRIGHT_FACTS"); state.workflow_mode=self.workflow_mode.currentData(); state.auto_rebuild_after_approval=self.auto_rebuild.isChecked(); self._apply_visual_settings(state)
         if previous!=(state.style_mode,state.host_enabled,state.host_character_id) and (self.project/"planning/story.json").exists():
             plan=self.store.load_plan(self.project)
             for shot in plan.shots: shot.status="stale"; shot.prompt_hash=None
@@ -181,8 +193,15 @@ class Window(QMainWindow):
 
     def update_visual_identity_preview(self,*_):
         style_id=self.style_mode.currentData() or LEGACY_STYLE_ID; profile=self.styles.get(style_id)
+        if style_id.startswith("bright_explainer") and self.voice_preset.currentData()=="calm_history":
+            self.voice_preset.setCurrentIndex(self.voice_preset.findData("energetic_explainer")); self.voice.setCurrentText("am_eric"); self.speech_speed.setValue(1.04); self.music_profile.setCurrentIndex(self.music_profile.findData("BRIGHT_FACTS"))
         self.style_description.setText(profile.get("description",""))
-        preview=ROOT/"reference_assets"/("bright_explainer_preview.png" if style_id=="bright_explainer_host" else "style_reference.png")
+        if style_id == "bright_explainer":
+            preview = ROOT / "reference_assets" / "v2_style_lock_bright_explainer.png"
+        elif style_id == "bright_explainer_host":
+            preview = ROOT / "reference_assets" / "bright_explainer_preview.png"
+        else:
+            preview = STYLE_REFERENCE
         if preview.exists(): self.style_preview.setPixmap(QPixmap(str(preview)).scaled(320,150,Qt.KeepAspectRatio,Qt.SmoothTransformation))
         else: self.style_preview.setText("Нет превью")
         if not self.host_enabled.isChecked() or style_id==LEGACY_STYLE_ID:
@@ -190,7 +209,15 @@ class Window(QMainWindow):
         character_id=self.host_character.currentData()
         if not character_id: self.reference_status.setText("Профиль ведущего не выбран"); return
         real,stylized=self.characters.reference_status(character_id,style_id)
-        self.reference_status.setText(f"Реальное фото: {real} · стилизованный референс: {stylized} · backend conditioning: не поддерживается")
+        self.reference_status.setText(f"Реальное фото: {real} · стилизованный референс: {stylized} · backend conditioning: поддерживается")
+
+    def update_workflow_mode(self,*_):
+        if hasattr(self,"advanced_panel"): self.advanced_panel.setVisible(self.workflow_mode.currentData()=="advanced")
+
+    def preview_voice(self):
+        try: self._ensure()
+        except Exception as exc: return QMessageBox.warning(self,"Voice preview",str(exc))
+        self.run_custom(lambda:Pipeline(self.project,lambda m:self.worker.progress.emit(m)).preview_voice())
 
     def set_real_host_reference(self):
         path,_=QFileDialog.getOpenFileName(self,"Выберите реальную фотографию ведущего","","Изображения (*.png *.jpg *.jpeg *.webp)")
@@ -246,7 +273,7 @@ class Window(QMainWindow):
             self.shot_meta.setText(f"Тип: {sh.visual_type} · Людей: {sh.people_count} · Объекты: {', '.join(sh.objects) or 'нет'} · Персонажи: {people} · Движение: {sh.camera_motion} · Время: {sh.start_time or 0:.1f}–{sh.end_time or 0:.1f} сек. · Seed: {sh.seed}")
             self.visual_type.blockSignals(True); self.visual_type.setCurrentText(sh.visual_type); self.visual_type.blockSignals(False)
             self.visual_purpose.setText(sh.visual_purpose); self.action_edit.setText(sh.action_description); self.placement_edit.setCurrentText(sh.subject_placement); self.angle_edit.setCurrentText(sh.camera_angle); self.framing_edit.setCurrentText(sh.framing); self.composition_edit.setText(sh.composition); self.historical_details.setText(", ".join(sh.historical_story_details))
-            self.visual_category_edit.setCurrentText(sh.visual_category or "host_explaining"); self.visual_focus_edit.setText(sh.visual_focus or sh.visual_subject); self.routing_source_edit.setCurrentText(sh.routing_source); self.host_present_edit.setChecked(bool(sh.host_present)); self.host_role_edit.setText(sh.host_role or ""); self.host_expression_edit.setText(sh.host_expression or ""); self.host_pose_edit.setText(sh.host_pose or "")
+            self.visual_category_edit.setCurrentText(sh.visual_category or "host_explaining"); self.visual_focus_edit.setText(sh.visual_focus or sh.visual_subject); self.routing_source_edit.setCurrentText(sh.routing_source); self.seed_edit.setValue(sh.seed); self.version_status.setText(f"{len(sh.image_versions)} previous · {'APPROVED' if sh.approved else 'review needed'}"); self.host_present_edit.setChecked(bool(sh.host_present)); self.host_role_edit.setText(sh.host_role or ""); self.host_expression_edit.setText(sh.host_expression or ""); self.host_pose_edit.setText(sh.host_pose or "")
             if sh.image_path:
                 pix=QPixmap(str(self.project/sh.image_path)); self.preview.setPixmap(pix.scaled(self.preview.size(),Qt.KeepAspectRatio,Qt.SmoothTransformation))
     def save_prompt(self):
@@ -264,7 +291,7 @@ class Window(QMainWindow):
     def rebuild_shot_prompt(self):
         if not self.project or not getattr(self,"current_shot",None): return
         plan=self.store.load_plan(self.project); sh=next(x for x in plan.shots if x.id==self.current_shot)
-        sh.action_description=self.action_edit.text().strip() or sh.action_description; sh.subject_placement=self.placement_edit.currentText(); sh.camera_angle=self.angle_edit.currentText(); sh.framing=self.framing_edit.currentText(); sh.composition=self.composition_edit.text().strip() or sh.composition; sh.director_override=True
+        sh.action_description=self.action_edit.text().strip() or sh.action_description; sh.subject_placement=self.placement_edit.currentText(); sh.camera_angle=self.angle_edit.currentText(); sh.framing=self.framing_edit.currentText(); sh.composition=self.composition_edit.text().strip() or sh.composition; sh.seed=self.seed_edit.value(); sh.director_override=True
         sh.visual_category=self.visual_category_edit.currentText(); sh.visual_focus=self.visual_focus_edit.text().strip() or sh.visual_subject; sh.routing_source=self.routing_source_edit.currentText(); sh.host_present=self.host_present_edit.isChecked(); sh.host_role=self.host_role_edit.text().strip() or None; sh.host_expression=self.host_expression_edit.text().strip() or None; sh.host_pose=self.host_pose_edit.text().strip() or None
         if sh.subject_placement=="CENTERED_CHARACTER" and not sh.centered_justification: sh.centered_justification="manual user composition"
         state=self.store.load_state(self.project)
@@ -276,7 +303,19 @@ class Window(QMainWindow):
         sh.status="stale"; sh.prompt_hash=None; self.store.save_plan(self.project,plan)
         state.images_status="stale"; state.render_status="stale"; self.store.save_state(self.project,state); self.details.setPlainText(sh.prompt); self.refresh_tree()
     def regen(self,new_seed=True):
-        if getattr(self,"current_shot",None): self.run_custom(lambda:Pipeline(self.project,lambda m:self.worker.progress.emit(m)).generate_images(self.current_shot,new_seed))
+        if getattr(self,"current_shot",None):
+            self.rebuild_shot_prompt(); self.run_custom(lambda:Pipeline(self.project,lambda m:self.worker.progress.emit(m)).generate_images(self.current_shot,new_seed))
+
+    def navigate_shot(self,offset):
+        if not self.project or not getattr(self,"current_shot",None): return
+        shots=sorted(self.store.load_plan(self.project).shots,key=lambda x:x.order); index=next(i for i,x in enumerate(shots) if x.id==self.current_shot); target=shots[(index+offset)%len(shots)]
+        proxy=QTreeWidgetItem(); proxy.setData(0,Qt.UserRole,("shot",target.id)); self.show_item(proxy)
+
+    def restore_previous_shot(self):
+        if getattr(self,"current_shot",None): self.run_custom(lambda:Pipeline(self.project,lambda m:self.worker.progress.emit(m)).restore_previous_shot(self.current_shot))
+
+    def approve_current_shot(self):
+        if getattr(self,"current_shot",None): self.run_custom(lambda:Pipeline(self.project,lambda m:self.worker.progress.emit(m)).approve_shot(self.current_shot))
     def open_image(self):
         if self.project and getattr(self,"current_shot",None):
             sh=next(x for x in self.store.load_plan(self.project).shots if x.id==self.current_shot)
