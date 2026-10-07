@@ -107,6 +107,8 @@ class ProjectState(BaseModel):
     style: str = "history_doodle_v1"
     voice: str = "am_michael"
     base_seed: int = 42000
+    output_width: int = 1920
+    output_height: int = 1080
     background_music: str | None = None
     background_music_enabled: bool = False
     background_music_mode: Literal["user_file", "procedural"] = "procedural"

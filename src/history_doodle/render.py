@@ -11,16 +11,16 @@ TRANSITION_SECONDS = 0.16
 def ffmpeg_available() -> bool:
     return bool(shutil.which("ffmpeg") and shutil.which("ffprobe"))
 
-def _motion_filter(motion: str, frames: int) -> str:
+def _motion_filter(motion: str, frames: int, width: int = 1920, height: int = 1080) -> str:
     # Keep motion deliberately restrained. Large zooms and lateral pans make
     # illustrated stills feel shaky, especially after upscaling to 1080p.
     if motion in ("slow_zoom_in", "subtle_push"):
-        return f"zoompan=z='min(zoom+0.015/{frames},1.015)':d={frames}:s=1920x1080:fps={FPS}"
+        return f"zoompan=z='min(zoom+0.015/{frames},1.015)':d={frames}:s={width}x{height}:fps={FPS}"
     if motion == "slow_zoom_out":
-        return f"zoompan=z='if(eq(on,0),1.015,max(1.0,zoom-0.015/{frames}))':d={frames}:s=1920x1080:fps={FPS}"
+        return f"zoompan=z='if(eq(on,0),1.015,max(1.0,zoom-0.015/{frames}))':d={frames}:s={width}x{height}:fps={FPS}"
     # Requested pans are intentionally converted to a locked frame. This is
     # safer for generated illustrations and prevents edge-to-edge judder.
-    return f"scale=1920:1080:force_original_aspect_ratio=increase,crop=1920:1080,fps={FPS}"
+    return f"scale={width}:{height}:force_original_aspect_ratio=increase,crop={width}:{height},fps={FPS}"
 
 def _xfade_graph(durations: list[float]) -> tuple[str, str]:
     """Build mostly hard cuts with an occasional short dissolve."""
@@ -78,7 +78,7 @@ def _assemble_long_form(clips: list[Path], temp: Path, output: Path) -> None:
     command += ["-filter_complex", ";".join(filters), "-map", f"[{previous}]", "-c:v", "libx264", "-preset", "fast", "-crf", "18", "-pix_fmt", "yuv420p", str(output)]
     run(command)
 
-def render(project: Path, plan: ProjectPlan, narration: Path, ass: Path, music: Path | None = None, progress=lambda *_: None) -> tuple[Path, Path]:
+def render(project: Path, plan: ProjectPlan, narration: Path, ass: Path, music: Path | None = None, progress=lambda *_: None, width: int = 1920, height: int = 1080) -> tuple[Path, Path]:
     temp = project / "render/temp"; temp.mkdir(parents=True, exist_ok=True)
     ordered_shots = sorted(plan.shots, key=lambda s:s.order)
     missing = [f"Shot {s.order}" for s in ordered_shots if s.status != "complete" or not s.image_path or not (project / (s.image_path or "")).exists()]
@@ -99,7 +99,7 @@ def render(project: Path, plan: ProjectPlan, narration: Path, ass: Path, music: 
             check = subprocess.run(["ffprobe","-v","error","-show_entries","format=duration","-of","default=nw=1:nk=1",str(clip)],capture_output=True,text=True)
             if check.returncode == 0 and abs(float(check.stdout.strip()) - frames/30) < .12:
                 clips.append(clip); progress(i,len(plan.shots)); continue
-        run(["ffmpeg","-y","-loop","1","-i",str(project/shot.image_path),"-vf",_motion_filter(shot.camera_motion,frames),"-frames:v",str(frames),"-c:v","libx264","-preset","fast","-crf","18","-pix_fmt","yuv420p",str(clip)])
+        run(["ffmpeg","-y","-loop","1","-i",str(project/shot.image_path),"-vf",_motion_filter(shot.camera_motion,frames,width,height),"-frames:v",str(frames),"-c:v","libx264","-preset","fast","-crf","18","-pix_fmt","yuv420p",str(clip)])
         clips.append(clip); progress(i, len(plan.shots))
     silent = temp / "video.mp4"; no_sub = project / "render/final_video_no_subtitles.mp4"; final = project / "render/final_video.mp4"
     if len(clips) == 1:

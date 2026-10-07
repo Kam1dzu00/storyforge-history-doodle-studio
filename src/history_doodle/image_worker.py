@@ -12,7 +12,7 @@ def generate(project: Path, only: str | None = None, new_seed: bool = False) -> 
     configure_model_cache()
     from mflux.models.common.config import ModelConfig
     from mflux.models.flux2.variants import Flux2Klein, Flux2KleinEdit
-    store = ProjectStore(); plan = store.load_plan(project)
+    store = ProjectStore(); plan = store.load_plan(project); state = store.load_state(project)
     use_reference = STYLE_REFERENCE.exists()
     cls = Flux2KleinEdit if use_reference else Flux2Klein
     model = cls(quantize=4, model_config=ModelConfig.flux2_klein_4b())
@@ -35,7 +35,15 @@ def generate(project: Path, only: str | None = None, new_seed: bool = False) -> 
             try:
                 if attempt == 2:
                     prompt = f"{shot.prompt}. Simplify minor background detail but preserve every locked style and character constraint."
-                kwargs = dict(seed=shot.seed + attempt, prompt=prompt, num_inference_steps=4, height=576, width=1024, guidance=1.0)
+                vertical = state.output_height > state.output_width
+                kwargs = dict(
+                    seed=shot.seed + attempt,
+                    prompt=prompt,
+                    num_inference_steps=4,
+                    height=1024 if vertical else 576,
+                    width=576 if vertical else 1024,
+                    guidance=1.0,
+                )
                 if use_reference: kwargs["image_paths"] = [str(STYLE_REFERENCE)]; kwargs["image_strength"] = 0.35
                 result = model.generate_image(**kwargs); result.save(target, overwrite=True)
                 shot.image_path = str(target.relative_to(project)); shot.prompt_hash = digest; shot.status = "complete"; error = None; break

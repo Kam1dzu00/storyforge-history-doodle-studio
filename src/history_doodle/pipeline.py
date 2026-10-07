@@ -105,12 +105,12 @@ class Pipeline:
 
     def build_subtitles(self):
         words = [WordStamp.model_validate(x) for x in json.loads((self.project/"audio/word_timestamps.json").read_text())]
-        result=build_subtitles(words,self.project/"subtitles"); self.state.subtitles_status="complete"; self._save(); return result
+        result=build_subtitles(words,self.project/"subtitles",self.state.output_width,self.state.output_height); self.state.subtitles_status="complete"; self._save(); return result
 
     def render_video(self):
         started=time.time()
         self.event("Собираю готовое видео…"); plan=self.store.load_plan(self.project)
-        result=render(self.project,plan,self.project/"audio/narration.wav",self.project/"subtitles/subtitles.ass",None,lambda i,n:self.event(f"Обрабатываю кадр {i} из {n}…"))
+        result=render(self.project,plan,self.project/"audio/narration.wav",self.project/"subtitles/subtitles.ass",None,lambda i,n:self.event(f"Обрабатываю кадр {i} из {n}…"),self.state.output_width,self.state.output_height)
         if self.state.background_music_enabled or self.state.background_music:
             from .mastering import master_background_music
             self.event("Добавляю фоновую атмосферу без повторного кодирования видео…")
@@ -132,8 +132,8 @@ class Pipeline:
         run(["ffmpeg","-y","-ss",str(start),"-to",str(end),"-i",str(self.project/"audio/narration.wav"),str(audio)])
         words=[WordStamp.model_validate(x) for x in json.loads((self.project/"audio/word_timestamps.json").read_text()) if x["end"]>=start and x["start"]<=end]
         for word in words: word.start=max(0,word.start-start); word.end=min(end-start,word.end-start)
-        _,ass=build_subtitles(words,preview)
-        _,final=render(preview,plan,audio,ass,None,lambda i,n:self.event(f"Собираю превью {i} из {n}…"))
+        _,ass=build_subtitles(words,preview,self.state.output_width,self.state.output_height)
+        _,final=render(preview,plan,audio,ass,None,lambda i,n:self.event(f"Собираю превью {i} из {n}…"),self.state.output_width,self.state.output_height)
         return final
 
     def full(self):
