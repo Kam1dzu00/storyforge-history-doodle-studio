@@ -172,6 +172,12 @@ class PromptComposer:
         if identity: prompt = style_block + "\nIDENTITY PRIORITY: " + identity + "\n" + prompt
         else: prompt = style_block + "\n" + prompt
         negative = ", ".join(style.get("negative_prompt_keywords", []))
+        if host:
+            prompt += "\nOUTPUT DISCIPLINE: ONE recurring host only, in ONE continuous cinematic scene. References are identity/style anchors only; never reproduce their panels, labels, layouts, or extra figures."
+            negative += ", collage, contact sheet, character sheet, multiple panels, split screen, duplicate person, extra people, reference labels, gibberish text"
+        elif shot.people_count == 0:
+            prompt += "\nOUTPUT DISCIPLINE: object/concept only; absolutely no person, face, body, hand, presenter, or host."
+            negative += ", person, people, human, face, body, hand, presenter, host"
         if style.get("full_bleed_required"): negative += ", " + ", ".join(FULL_BLEED_EXCLUSIONS)
         return prompt, negative, refs
 

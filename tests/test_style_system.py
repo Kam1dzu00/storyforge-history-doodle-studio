@@ -14,6 +14,7 @@ from history_doodle.style_system import (
     StyleRegistry,
     VisualRouter,
 )
+from history_doodle.image_worker import generation_kwargs, requires_host_conditioning
 
 
 def shot(narration: str, **updates) -> Shot:
@@ -88,6 +89,25 @@ def test_host_prompt_resolves_profile_without_claiming_backend_conditioning():
     assert "tattoo on LEFT forearm" in prompt
     assert "watch on LEFT wrist" in prompt
     assert all(path.exists() for path in refs)
+
+
+def test_host_backend_receives_real_then_character_sheet_references():
+    state = bright_state(host_enabled=True, host_character_id="kam1dzu00_host")
+    item = shot("Imagine that?", visual_category="host_reaction", visual_focus="the host reacting", host_present=True)
+    _, _, refs = PromptComposer().compose(state, item, require_references=True)
+    kwargs = generation_kwargs(state, item, "prompt", refs)
+    assert requires_host_conditioning(state, item)
+    assert kwargs["image_paths"][0].endswith("host_real_identity.jpg")
+    assert kwargs["image_paths"][1].endswith("host_character_sheet_bright.png")
+
+
+def test_non_host_backend_does_not_receive_host_references():
+    state = bright_state(host_enabled=True, host_character_id="kam1dzu00_host")
+    item = shot("This is an air conditioner.", visual_category="object_single", host_present=False)
+    _, _, refs = PromptComposer().compose(state, item, require_references=True)
+    kwargs = generation_kwargs(state, item, "prompt", refs)
+    assert not requires_host_conditioning(state, item)
+    assert "image_paths" not in kwargs
 
 
 def test_missing_stylized_reference_falls_back_to_real_when_available(tmp_path, monkeypatch):

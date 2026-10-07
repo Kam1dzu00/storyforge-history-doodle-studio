@@ -5,6 +5,7 @@
   "compatibility_version": 1,
   "aspect_ratio_default": "16:9",
   "full_bleed_required": true,
+  "style_board_path": "reference_assets/bright_style_board.png",
   "visual_identity": {
     "line_work": [
       "bold clean dark outlines",

@@ -9,7 +9,23 @@ from .util import prompt_hash
 from .util import cleanup_models
 from .style_system import HostReferenceConditioningUnsupported, LEGACY_STYLE_ID, PromptComposer
 
-HOST_REFERENCE_CONDITIONING_SUPPORTED = False
+HOST_REFERENCE_CONDITIONING_SUPPORTED = True
+
+
+def requires_host_conditioning(state, shot) -> bool:
+    return bool(state.style_mode == "bright_explainer_host" and state.host_enabled and shot.host_present)
+
+
+def generation_kwargs(state, shot, prompt: str, references: list[Path], attempt: int = 0) -> dict:
+    vertical = state.output_height > state.output_width
+    kwargs = dict(
+        seed=shot.seed + attempt, prompt=prompt, num_inference_steps=4,
+        height=1024 if vertical else 576, width=576 if vertical else 1024, guidance=1.0,
+    )
+    if references:
+        kwargs["image_paths"] = [str(path) for path in references]
+        kwargs["image_strength"] = 0.20
+    return kwargs
 
 def generate(project: Path, only: str | None = None, new_seed: bool = False) -> None:
     configure_model_cache()
@@ -24,7 +40,7 @@ def generate(project: Path, only: str | None = None, new_seed: bool = False) -> 
         # Keep model memory sequential: base-model object/diagram shots first,
         # then host reference-edit shots, while preserving order in each group.
         shots = [s for s in shots if not s.host_present] + [s for s in shots if s.host_present]
-    if not legacy and any(s.host_present for s in shots) and not HOST_REFERENCE_CONDITIONING_SUPPORTED:
+    if any(requires_host_conditioning(state, s) for s in shots) and not HOST_REFERENCE_CONDITIONING_SUPPORTED:
         raise HostReferenceConditioningUnsupported(
             "HOST_IMAGE_REFERENCE_CONDITIONING_UNSUPPORTED: the current image backend cannot accept "
             "real/stylized host image references as conditioning; the host consistency test cannot run."
@@ -60,18 +76,7 @@ def generate(project: Path, only: str | None = None, new_seed: bool = False) -> 
             try:
                 if attempt == 2:
                     prompt = f"{shot.prompt}. Simplify minor background detail but preserve every locked style and character constraint."
-                vertical = state.output_height > state.output_width
-                kwargs = dict(
-                    seed=shot.seed + attempt,
-                    prompt=prompt,
-                    num_inference_steps=4,
-                    height=1024 if vertical else 576,
-                    width=576 if vertical else 1024,
-                    guidance=1.0,
-                )
-                if references:
-                    kwargs["image_paths"] = [str(x) for x in references]
-                    kwargs["image_strength"] = 0.35
+                kwargs = generation_kwargs(state, shot, prompt, references, attempt)
                 result = model.generate_image(**kwargs); result.save(target, overwrite=True)
                 shot.image_path = str(target.relative_to(project)); shot.prompt_hash = digest; shot.status = "complete"; error = None; break
             except Exception as exc:
@@ -87,6 +92,14 @@ def generate(project: Path, only: str | None = None, new_seed: bool = False) -> 
         }
         audit_path=project/"logs/image_generation.jsonl"; audit_path.parent.mkdir(parents=True,exist_ok=True)
         with audit_path.open("a",encoding="utf-8") as handle: handle.write(json.dumps(audit,ensure_ascii=False)+"\n")
+        resolution_path=project/"logs/reference_resolution_report.json"
+        if resolution_path.exists():
+            report=json.loads(resolution_path.read_text(encoding="utf-8"))
+            for row in report:
+                if row.get("shot_id")==shot.id:
+                    row["references_actually_passed_to_image_backend"]=bool(references)
+                    row["generated_path"]=str(target.relative_to(project))
+            resolution_path.write_text(json.dumps(report,indent=2),encoding="utf-8")
         timings.append(round(time.time()-shot_started,2))
         print(json.dumps({"event":"generated", "index":index, "total":len(shots), "shot":shot.id, "path":str(target)}), flush=True)
     metrics_path=project/"logs/long_form_benchmark.json"; metrics={}

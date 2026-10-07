@@ -16,7 +16,7 @@
   "identity_priority": "real_identity_reference_first",
   "reference_real_image_path": "reference_assets/host_real_identity.jpg",
   "reference_stylized_by_style": {
-    "bright_explainer_host": "reference_assets/host_stylized_bright_explainer.png"
+    "bright_explainer_host": "reference_assets/host_character_sheet_bright.png"
   },
   "wardrobe_defaults": {
     "modern_explainer": [
