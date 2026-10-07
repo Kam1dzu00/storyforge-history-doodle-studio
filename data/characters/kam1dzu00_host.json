@@ -1,0 +1,45 @@
+{
+  "character_id": "kam1dzu00_host",
+  "display_name": "Channel Host",
+  "role": "recurring narrator, guide, reaction character and on-screen storyteller",
+  "base_identity_description": "Young adult light-skinned male with short spiky blond hair, blue eyes, light mustache and short beard/goatee, slim recognizable face and expressive eyebrows.",
+  "immutable_visual_traits": [
+    "short spiky blond hair",
+    "blue eyes",
+    "light mustache",
+    "short beard/goatee",
+    "slim recognizable face",
+    "expressive eyebrows",
+    "tattoo on LEFT forearm",
+    "watch on LEFT wrist"
+  ],
+  "identity_priority": "real_identity_reference_first",
+  "reference_real_image_path": "reference_assets/host_real_identity.jpg",
+  "reference_stylized_by_style": {
+    "bright_explainer_host": "reference_assets/host_stylized_bright_explainer.png"
+  },
+  "wardrobe_defaults": {
+    "modern_explainer": [
+      "clean white or neutral t-shirt",
+      "simple modern casual clothing",
+      "uncluttered silhouette"
+    ]
+  },
+  "allowed_variation": [
+    "expression",
+    "pose",
+    "camera angle",
+    "wardrobe when scene requires it",
+    "environment",
+    "lighting"
+  ],
+  "do_not_change_rules": [
+    "do not move tattoo to right arm",
+    "do not move watch to right wrist",
+    "do not replace the face with a generic cartoon male",
+    "do not drastically change age",
+    "do not drastically change hairstyle or hair color",
+    "do not erase facial hair unless explicitly requested",
+    "do not make the recurring host unrecognizable"
+  ]
+}

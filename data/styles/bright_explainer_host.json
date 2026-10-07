@@ -1,0 +1,97 @@
+{
+  "style_id": "bright_explainer_host",
+  "display_name": "Bright Explainer",
+  "description": "Bright, energetic, adult-cartoon educational style with a recurring host, direct visual jokes, strong readability, and full-bleed cinematic 16:9 scenes.",
+  "compatibility_version": 1,
+  "aspect_ratio_default": "16:9",
+  "full_bleed_required": true,
+  "visual_identity": {
+    "line_work": [
+      "bold clean dark outlines",
+      "clear readable silhouette edges",
+      "slightly varied line weight"
+    ],
+    "rendering": [
+      "flat plus soft cel shading",
+      "crisp graphic shapes",
+      "clean facial features",
+      "no painterly blur",
+      "no photorealism"
+    ],
+    "palette": [
+      "bright cyan",
+      "deep electric blue",
+      "warm yellow",
+      "orange-red accents",
+      "cream highlights",
+      "dark navy shadows"
+    ],
+    "lighting": [
+      "clear focal lighting",
+      "strong warm/cool separation when useful",
+      "rim light allowed for emphasis",
+      "subject must remain readable"
+    ]
+  },
+  "composition_rules": [
+    "full-bleed edge-to-edge frame",
+    "one clear visual focus per shot",
+    "dynamic asymmetry encouraged",
+    "foreground midground background separation",
+    "mobile-readable subject scale",
+    "host may be large in reaction/hook shots",
+    "objects must dominate object-driven shots"
+  ],
+  "host_rendering_rules": [
+    "preserve exact recurring-host identity",
+    "stylize identity without replacing it",
+    "expressive eyebrows and eyes",
+    "clear readable poses",
+    "allow comedic exaggeration without facial identity loss",
+    "preserve tattoo on left forearm",
+    "preserve watch on left wrist"
+  ],
+  "camera_rules": [
+    "vary close medium and wide shots",
+    "dramatic low/high angles allowed for jokes and reveals",
+    "avoid repetitive centered chest-up presenter framing",
+    "use object hero closeups when narration names an object"
+  ],
+  "background_rules": [
+    "complete environment rather than white backdrop",
+    "no white border",
+    "no poster on paper",
+    "no embedded illustration card",
+    "no empty canvas margins",
+    "background supports meaning but never overwhelms subject"
+  ],
+  "positive_prompt_keywords": [
+    "bright adult cartoon explainer",
+    "full-bleed widescreen scene",
+    "crisp bold outlines",
+    "flat and soft cel shading",
+    "high visual readability",
+    "expressive character acting",
+    "dynamic composition",
+    "controlled saturated colors",
+    "cinematic playful educational illustration"
+  ],
+  "negative_prompt_keywords": [
+    "white border",
+    "white page",
+    "poster layout",
+    "floating card",
+    "blank margins",
+    "photorealistic",
+    "painterly",
+    "washed out",
+    "muddy colors",
+    "anime",
+    "children's picture book",
+    "glossy 3D",
+    "extra limbs",
+    "extra fingers",
+    "fused hands",
+    "generic random male face"
+  ]
+}

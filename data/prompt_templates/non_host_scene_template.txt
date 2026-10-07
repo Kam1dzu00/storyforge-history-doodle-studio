@@ -1,0 +1,37 @@
+[STYLE]
+Style ID: {style_id}
+Create a full-bleed 16:9 scene. No borders, no white page, no poster card, no empty margins.
+Apply all style-profile rendering, palette, camera and anatomy rules.
+
+[EXACT VISUAL FOCUS]
+{visual_focus}
+
+[SCENE TYPE]
+{visual_category}
+
+[SCENE]
+Environment: {environment}
+Action/process: {action}
+Foreground: {foreground}
+Midground: {midground}
+Background: {background}
+
+[CAMERA]
+Framing: {framing}
+Angle: {camera_angle}
+Placement: {subject_placement}
+
+[DIRECTOR LOGIC]
+The narration is: {narration_summary}
+The named subject or concept must be instantly readable.
+Do NOT insert the recurring host unless explicitly requested.
+
+[NEGATIVE]
+No irrelevant people.
+No extra objects.
+No white frame.
+No poster layout.
+No photorealism.
+No anime.
+No glossy 3D.
+No muddy clutter.

@@ -12,6 +12,7 @@ from .storage import ProjectStore
 from .subtitles import build as build_subtitles
 from .timing import allocate_timeline
 from .util import run
+from .style_system import prepare_plan
 
 class Pipeline:
     def __init__(self, project: Path, event=lambda *_: None):
@@ -43,6 +44,7 @@ class Pipeline:
         self._check_cancel()
         script = (self.project/"script.txt").read_text(encoding="utf-8"); self.event("Разбиваю историю на разделы, сцены и кадры…")
         plan = LocalPlanner().plan(script, self.state.target_duration_seconds, self.state.base_seed)
+        plan = prepare_plan(plan, self.state)
         self.store.save_plan(self.project, plan); self.state.planning_status="complete"; self.state.images_status="stale"; self.state.subtitles_status="stale"; self.state.render_status="stale"; self._save()
         self.metrics["planning_seconds"]=round(time.time()-started,2); return plan
 

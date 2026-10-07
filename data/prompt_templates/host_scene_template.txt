@@ -1,0 +1,57 @@
+[STYLE]
+Style ID: {style_id}
+Create a full-bleed 16:9 scene. No borders, no white page, no poster card, no empty margins.
+Apply all style-profile rendering, palette, camera and anatomy rules.
+
+[RECURRING HOST IDENTITY]
+This is the recurring channel host, not a generic character.
+Use the provided REAL IDENTITY REFERENCE as the primary likeness anchor.
+Use the approved STYLIZED REFERENCE for the current style as the style-character anchor.
+Preserve:
+- short spiky blond hair
+- blue eyes
+- light mustache
+- short beard/goatee
+- slim recognizable face
+- expressive eyebrows
+- tattoo on LEFT forearm
+- watch on LEFT wrist
+Do not swap tattoo/watch sides.
+Do not replace his face with a generic cartoon male.
+
+[VISUAL FOCUS]
+{visual_focus}
+
+[HOST ROLE]
+Role: {host_role}
+Expression: {host_expression}
+Pose/action: {host_pose}
+
+[SCENE]
+Environment: {environment}
+Action: {action}
+Foreground: {foreground}
+Midground: {midground}
+Background: {background}
+
+[CAMERA]
+Framing: {framing}
+Angle: {camera_angle}
+Placement: {subject_placement}
+
+[DIRECTOR LOGIC]
+The narration is: {narration_summary}
+Show only elements that help communicate this exact idea.
+The host may be central, but do not add unrelated props or background activity.
+
+[NEGATIVE]
+No extra fingers.
+No duplicate limbs.
+No fused hands.
+No random extra people.
+No white frame.
+No floating poster.
+No photorealism.
+No anime.
+No glossy 3D.
+No generic replacement face.

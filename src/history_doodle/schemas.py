@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from typing import Literal
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 Motion = Literal["slow_zoom_in", "slow_zoom_out", "pan_left", "pan_right", "subtle_push", "static"]
 VisualType = Literal["CHARACTER_WIDE", "CHARACTER_MEDIUM", "CHARACTER_CLOSEUP", "OBJECT_HERO", "OBJECT_COLLECTION", "DETAIL", "ENVIRONMENT", "INFO_CARD", "MAP", "COMPARISON", "SILHOUETTE", "GROUP"]
@@ -18,6 +18,7 @@ class CharacterCard(BaseModel):
     fixed_traits: list[str] = Field(default_factory=list)
 
 class Shot(BaseModel):
+    model_config = ConfigDict(extra="allow")
     id: str
     scene_id: str
     order: int
@@ -60,6 +61,13 @@ class Shot(BaseModel):
     time_of_day: str = ""
     weather: str = ""
     validation_checks: dict[str, bool] = Field(default_factory=dict)
+    visual_category: str | None = None
+    visual_focus: str | None = None
+    host_present: bool | None = None
+    host_expression: str | None = None
+    host_pose: str | None = None
+    host_role: str | None = None
+    routing_source: Literal["auto", "manual"] = "auto"
 
 class Scene(BaseModel):
     id: str
@@ -99,6 +107,7 @@ class ProjectPlan(BaseModel):
         return self
 
 class ProjectState(BaseModel):
+    model_config = ConfigDict(extra="allow")
     project_id: str
     title: str
     input_mode: Literal["brief", "script"]
@@ -109,6 +118,11 @@ class ProjectState(BaseModel):
     base_seed: int = 42000
     output_width: int = 1920
     output_height: int = 1080
+    style_mode: str | None = None
+    host_enabled: bool = False
+    host_character_id: str | None = None
+    semantic_visual_routing: bool = True
+    full_bleed_frames: bool | None = None
     background_music: str | None = None
     background_music_enabled: bool = False
     background_music_mode: Literal["user_file", "procedural"] = "procedural"
