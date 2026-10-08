@@ -178,9 +178,10 @@ class PromptComposer:
         elif shot.people_count == 0:
             prompt += "\nOUTPUT DISCIPLINE: object/concept only; absolutely no person, face, body, hand, presenter, or host."
             negative += ", person, people, human, face, body, hand, presenter, host"
-        if style["style_id"] == "bright_explainer" and not shot.labels:
-            prompt += "\nTEXT SAFETY: no generated words, letters, captions, speech bubbles, signs, or typography; subtitles and titles are added later by the deterministic video renderer."
-            negative += ", text, letters, words, captions, speech bubble, sign, typography, gibberish"
+        if style["style_id"] == "bright_explainer":
+            prompt += "\nV3 SHOW ENERGY: Create a finished adult animated-show frame with one instantly readable visual beat, dramatic perspective, expressive acting or a world-grounded hero object, strong depth layers, cinematic warm/cool lighting, controlled motion accents, and no empty infographic staging."
+            prompt += "\nABSOLUTE TEXT BAN: generate no readable or unreadable text of any kind: no letters, words, numbers, signs, captions, labels, bubbles, pseudo-language, gibberish, typography, watermark, UI, or debug marks. Leave clean composition space only when the deterministic renderer will add text later."
+            negative += ", text, letters, words, numbers, captions, speech bubble, sign, label, pseudo-language, typography, watermark, UI text, debug text, gibberish"
         if style.get("full_bleed_required"): negative += ", " + ", ".join(FULL_BLEED_EXCLUSIONS)
         return prompt, negative, refs
 

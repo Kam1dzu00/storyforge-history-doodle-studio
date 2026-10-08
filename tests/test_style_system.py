@@ -43,7 +43,7 @@ def test_legacy_state_loads_and_preserves_unknown_fields():
 
 def test_registry_lists_profiles_and_rejects_unknown_style():
     ids = {item["style_id"] for item in StyleRegistry().list_styles()}
-    assert {LEGACY_STYLE_ID, "bright_explainer_host"} <= ids
+    assert {LEGACY_STYLE_ID, "bright_explainer", "bright_explainer_host"} <= ids
     with pytest.raises(RegistryError, match="Unknown style ID"):
         StyleRegistry().get("does_not_exist")
 
@@ -80,6 +80,17 @@ def test_non_host_prompt_is_deterministic_full_bleed_and_has_no_identity():
     assert "full-bleed" in first[0]
     assert "REAL IDENTITY REFERENCE" not in first[0]
     assert all(value in first[1] for value in FULL_BLEED_EXCLUSIONS)
+
+
+def test_bright_explainer_v3_enforces_show_energy_and_absolute_text_ban():
+    state = bright_state(style_mode="bright_explainer", host_enabled=False)
+    item = shot("A Roman reacts to a shared sponge.", visual_category="character_reaction", visual_focus="a disgusted Roman and the sponge", people_count=1)
+    prompt, negative, refs = PromptComposer().compose(state, item)
+    assert refs == []
+    assert "V3 SHOW ENERGY" in prompt
+    assert "ABSOLUTE TEXT BAN" in prompt
+    assert "finished adult animated-show frame" in prompt
+    assert all(word in negative for word in ("pseudo-language", "watermark", "debug text", "gibberish"))
 
 
 def test_host_prompt_resolves_profile_without_claiming_backend_conditioning():

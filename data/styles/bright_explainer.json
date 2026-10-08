@@ -1,19 +1,20 @@
 {
   "style_id": "bright_explainer",
   "display_name": "Bright Explainer",
-  "description": "Bright, punchy, full-frame cartoon explainer with literal visuals, bold outlines, controlled text, and mobile-first readability.",
-  "compatibility_version": 2,
+  "description": "Bright adult animated explainer with expressive comedy, cinematic depth, literal visual storytelling, and deterministic text overlays.",
+  "compatibility_version": 3,
   "aspect_ratio_default": "16:9",
   "full_bleed_required": true,
-  "text_in_image_allowed": true,
+  "text_in_image_allowed": false,
   "style_board_path": "reference_assets/v2_style_lock_bright_explainer.png",
   "visual_identity": [
     "modern high-energy comic explainer",
     "thick clean dark outlines",
-    "flat plus soft cel shading",
+    "rich cel shading with cinematic shadows and bright highlights",
     "bold simplified shapes",
     "strong readable silhouettes",
-    "saturated controlled blue yellow red and cream palette"
+    "saturated cyan deep navy warm yellow orange coral red and cream palette",
+    "finished adult animated-show frame rather than an infographic"
   ],
   "composition_rules": [
     "full-screen edge-to-edge 16:9 frame",
@@ -21,25 +22,33 @@
     "semantically literal before metaphorical",
     "dynamic shot variety",
     "large mobile-readable subjects",
-    "short text headings only when useful"
+    "strong foreground midground and background depth",
+    "expressive character acting or an object grounded in a complete world",
+    "one strong visual beat readable in under one second",
+    "reserve clean negative space only for deterministic renderer overlays"
   ],
   "camera_rules": [
     "alternate wide medium close-up object and comparison compositions",
     "avoid three identical centered frames in a row",
-    "use object hero close-up when narration names an object"
+    "use object hero close-up when narration names an object",
+    "use low angle high angle extreme closeup over-shoulder diagonals and cropped foreground framing",
+    "no three consecutive frames with the same composition"
   ],
   "background_rules": [
     "complete environment with no white outer border",
     "support the focal subject without clutter",
-    "no poster floating on a page"
+    "no poster floating on a page",
+    "object shots remain grounded in a cinematic environment with lighting and depth"
   ],
   "positive_prompt_keywords": [
     "bright cartoon YouTube explainer",
     "full-bleed widescreen scene",
     "clean thick outlines",
     "expressive readable acting",
-    "high contrast educational comic",
-    "meme energy but polished"
+    "high contrast animated comedy",
+    "meme energy but polished",
+    "dramatic perspective and warm cool lighting contrast",
+    "clean controlled motion lines impact shapes and foreground action"
   ],
   "negative_prompt_keywords": [
     "white border",
@@ -52,7 +61,23 @@
     "tiny unreadable detail",
     "irrelevant people",
     "extra limbs",
-    "fused hands"
+    "fused hands",
+    "letters",
+    "words",
+    "signs",
+    "captions",
+    "fake labels",
+    "pseudo-language",
+    "gibberish",
+    "typography",
+    "watermark",
+    "UI text",
+    "debug text",
+    "speech bubbles",
+    "generic infographic",
+    "three-column layout",
+    "centered object on empty pastel background",
+    "neutral mannequin pose"
   ],
   "default_shot_priorities": [
     "hook_title_card",
