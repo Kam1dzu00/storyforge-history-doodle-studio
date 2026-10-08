@@ -164,7 +164,10 @@ class PromptComposer:
             "environment": shot.environment_context, "action": shot.action_description, "foreground": self._join(shot.foreground_elements),
             "midground": self._join(shot.midground_elements), "background": self._join(shot.background_elements),
             "framing": shot.framing, "camera_angle": shot.camera_angle, "subject_placement": shot.subject_placement,
-            "narration_summary": shot.narration_context,
+            # Object-only frames should be driven by the literal visual brief.
+            # Passing spoken copy here invites image models to render that copy
+            # as pseudo-text even when the negative prompt bans typography.
+            "narration_summary": shot.narration_context if shot.people_count else (shot.visual_focus or shot.visual_subject),
         }
         template = self._template("host_scene_template.txt" if host else "non_host_scene_template.txt")
         prompt = template.format_map(values)
