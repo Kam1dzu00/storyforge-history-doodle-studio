@@ -14,8 +14,8 @@ from history_doodle.util import prompt_hash
 PROJECT = Path("projects/youve-been-lied-to-about-getting-sick-handsafe-v2")
 CORRECTIONS = {
     "shot_001": "one glass thermometer surrounded by several playful virus particles against a clean cyan background, objects only",
-    "shot_002": "an abstract swirl of a coat, old telephone, radio, and glowing germ symbols colliding in playful chaos, objects only, no bubbles",
-    "shot_004": "a bright eraser sweeping away three dark germ shapes and revealing clean colorful medical symbols, objects only",
+    "shot_002": "an old rotary telephone, vintage radio, winter coat, and colorful germ shapes caught in one swirling vortex, isolated objects only",
+    "shot_004": "one enormous red eraser colliding with three dark germ shapes in a burst of clean motion lines, isolated objects only",
     "shot_006": "cold blue snowflake on the left and a large red virus on the right, one bold arrow points only toward the virus, objects only",
     "shot_007": "snow outside a window, tightly clustered chairs indoors, and virus particles passing between the chairs, visual chain made only from objects",
     "shot_009": "one completely plain amber antibiotic bottle with a white cap against a radiant cyan background, no printed surface",
@@ -30,11 +30,11 @@ CORRECTIONS = {
     "shot_021": "one thermometer, one plain circular clock with no markings, and three colored symptom dots arranged cleanly, objects only",
     "shot_022": "one plain unmarked tissue box with a comically green tissue emerging, isolated object closeup",
     "shot_023": "a clean cutaway sinus model with yellow and green mucus beside two plain tissues, anatomical object model only",
-    "shot_024": "one green mucus drop under one magnifying glass beside three colored severity dots, objects only",
-    "shot_026": "water glass, bed pillow, soap, vaccine shield, and medical cross orbiting a bright central question mark symbol, objects only",
+    "shot_024": "one green mucus drop beneath a magnifying glass resting flat on a tabletop beside three colored severity dots, isolated objects only",
+    "shot_026": "water glass, bed pillow, soap bar, vaccine shield, and medical cross arranged radially around a bright empty center, isolated objects only",
     "shot_027": "one enormous virus icon beside one much smaller bacterium icon, clean proportional comparison, objects only",
     "shot_028": "bed pillow, water glass, thermometer, medicine cup, soup bowl, and folded blanket arranged in one clean row, objects only",
-    "shot_029": "bed and water at left, small clinic building in center, glowing warning triangle at right, increasing urgency, objects only",
+    "shot_029": "three tabletop miniature models in a row: bed with water, small clinic building, and glowing warning triangle, isolated objects only",
     "shot_030": "a plain antibiotic capsule used as the obviously wrong tool against a huge virus beside a simple toolbox, objects only",
     "shot_031": "soap bubbles washing germs away, vaccine shield blocking a virus, mask icon covering a cough cloud, and a closed home door, objects only",
     "shot_032": "one overly simple straight blue line colliding with a tangled cluster of colorful cords, abstract objects only",
@@ -59,6 +59,11 @@ def main() -> None:
         shot.people_count = 0
         shot.host_present = False
         shot.labels = []
+        shot.composition = "one clean full-screen object composition with no panels or inset scenes"
+        shot.foreground_elements = ["one large relevant object"]
+        shot.midground_elements = [focus]
+        shot.background_elements = ["clean abstract cyan gradient with no room details"]
+        shot.environment_context = "abstract bright medical explainer background, objects only"
         shot.seed = (shot.seed + 104729) % 2_147_483_647
         shot.routing_source = "manual"
         shot.prompt, shot.negative_prompt, _ = composer.compose(state, shot)
