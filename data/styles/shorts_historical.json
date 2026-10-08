@@ -1,0 +1,9 @@
+{
+  "style_id":"shorts_historical","display_name":"Shorts Historical Cartoon","description":"Warm detailed historical editorial cartoon with comic energy.","full_bleed_required":true,
+  "visual_identity":["warm historical environments","confident ink outlines","simplified period props","adult editorial humor"],
+  "composition_rules":["full-screen 9:16","literal period object first","clear mobile silhouette","environmental storytelling"],
+  "camera_rules":["wide establishing views","object hero closeups","top-down maps"],
+  "background_rules":["historically grounded setting","no fake parchment frame","no modern objects"],
+  "positive_prompt_keywords":["premium historical cartoon","rich warm color","clean cel shading","vertical story frame"],
+  "negative_prompt_keywords":["modern objects","fantasy armor","photorealism","anime","extra limbs","hands","text","letters","logos","watermark"]
+}

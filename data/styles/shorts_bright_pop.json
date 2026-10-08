@@ -1,0 +1,9 @@
+{
+  "style_id":"shorts_bright_pop","display_name":"Shorts Bright Pop Science","description":"High-energy adult pop-science vertical illustration.","full_bleed_required":true,
+  "visual_identity":["bold clean ink outlines","saturated controlled cyan yellow coral palette","adult editorial cartoon","punchy graphic motion"],
+  "composition_rules":["full-screen edge-to-edge 9:16","one dominant mobile-readable idea","strong depth","fast visual clarity"],
+  "camera_rules":["dramatic closeups","dynamic diagonals","alternate macro object and process views"],
+  "background_rules":["complete simplified world","no white border","no presentation card"],
+  "positive_prompt_keywords":["premium pop science comic","clean cel shading","high contrast","mobile-first vertical composition"],
+  "negative_prompt_keywords":["photorealism","glossy 3D","childish","extra limbs","hands","text","letters","labels","logos","watermark"]
+}

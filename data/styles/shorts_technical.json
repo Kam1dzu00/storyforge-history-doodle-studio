@@ -1,0 +1,9 @@
+{
+  "style_id":"shorts_technical","display_name":"Shorts Technical Engineering","description":"Retro technical poster and clean mechanical cutaway with dynamic color.","full_bleed_required":true,
+  "visual_identity":["retro engineering poster","bold mechanical shapes","clean cutaway layers","teal orange cream navy palette"],
+  "composition_rules":["full-screen 9:16","single readable mechanism","large mobile-scale parts","diagram integrated into a world"],
+  "camera_rules":["macro cross-sections","split comparisons","hero machine views"],
+  "background_rules":["simple technical environment","no sterile CAD","no white border"],
+  "positive_prompt_keywords":["premium technical editorial illustration","crisp outlines","dynamic cutaway","vertical mobile composition"],
+  "negative_prompt_keywords":["CAD screenshot","photorealism","glossy 3D","extra limbs","hands","text","letters","labels","logos","watermark"]
+}

@@ -1,0 +1,9 @@
+{
+  "style_id":"shorts_spy","display_name":"Shorts Spy Hidden Stories","description":"Cold War pulp and classified engineering illustration.","full_bleed_required":true,
+  "visual_identity":["deep navy black and desaturated paper","red warning accents","pulp spy ink","technical cutaway drama"],
+  "composition_rules":["full-screen 9:16","classified reveal","one dominant machine or silhouette","clear depth"],
+  "camera_rules":["low angles","deep-sea wides","macro technical cutaways"],
+  "background_rules":["moody period environment","no readable documents","no border"],
+  "positive_prompt_keywords":["adult Cold War pulp illustration","bold ink","cinematic shadows","vertical hidden-story frame"],
+  "negative_prompt_keywords":["modern digital UI","fantasy","photorealism","anime","extra limbs","hands","text","letters","logos","watermark"]
+}

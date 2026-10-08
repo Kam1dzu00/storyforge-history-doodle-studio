@@ -1,0 +1,9 @@
+{
+  "style_id":"shorts_dark_neon","display_name":"Shorts Dark Neon Science","description":"Dark navy science graphic novel with restrained neon accents.","full_bleed_required":true,
+  "visual_identity":["deep navy and black base","electric cyan violet and red accents","bold graphic-novel line art","selective glow"],
+  "composition_rules":["full-screen 9:16","one dramatic focal subject","high silhouette contrast","glitch only as punctuation"],
+  "camera_rules":["extreme closeups","tilted frames","dramatic negative space"],
+  "background_rules":["dark cinematic depth","no border","no UI panels"],
+  "positive_prompt_keywords":["adult neon science graphic novel","crisp ink","cinematic contrast","vertical mobile frame"],
+  "negative_prompt_keywords":["constant glitch","cyberpunk text","photorealism","3D render","extra limbs","hands","text","letters","logos","watermark"]
+}

@@ -2,11 +2,31 @@ from __future__ import annotations
 
 import json, shutil, subprocess
 from pathlib import Path
+from PIL import Image, ImageDraw, ImageFont
 from .schemas import ProjectPlan
 from .util import run
 
 FPS = 30
 TRANSITION_SECONDS = 0.16
+
+
+def _font(size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
+    for path in ("/System/Library/Fonts/Supplemental/Arial Bold.ttf", "/System/Library/Fonts/Supplemental/Helvetica.ttc"):
+        if Path(path).exists(): return ImageFont.truetype(path,size=size)
+    return ImageFont.load_default()
+
+
+def _deterministic_overlay(source: Path, output: Path, labels: list[str], cta: bool = False) -> Path:
+    image=Image.open(source).convert("RGBA"); draw=ImageDraw.Draw(image,"RGBA")
+    text="\n".join(labels); max_width=int(image.width*.86); size=max(34,int(image.width*(.080 if cta else .073)))
+    font=_font(size)
+    while draw.multiline_textbbox((0,0),text,font=font,spacing=8,align="center")[2] > max_width and size>24:
+        size-=2; font=_font(size)
+    box=draw.multiline_textbbox((0,0),text,font=font,spacing=8,align="center",stroke_width=3)
+    width,height=box[2]-box[0],box[3]-box[1]; x=(image.width-width)//2; y=int(image.height*(.58 if cta else .08))
+    pad=18; draw.rounded_rectangle((x-pad,y-pad,x+width+pad,y+height+pad),radius=18,fill=(8,15,28,196),outline=(255,201,55,235),width=4)
+    draw.multiline_text((x,y),text,font=font,fill=(255,255,255,255),stroke_width=3,stroke_fill=(5,10,20,255),spacing=8,align="center")
+    output.parent.mkdir(parents=True,exist_ok=True); image.convert("RGB").save(output,quality=96); return output
 
 def ffmpeg_available() -> bool:
     return bool(shutil.which("ffmpeg") and shutil.which("ffprobe"))
@@ -95,6 +115,8 @@ def render(project: Path, plan: ProjectPlan, narration: Path, ass: Path, music: 
         clip_duration = duration + (TRANSITION_SECONDS if has_dissolve_after else 0)
         frames = max(1, round(clip_duration*FPS)); clip = temp / f"clip_production_v3_{i:04d}.mp4"
         source_image=project/shot.image_path
+        if shot.labels:
+            source_image=_deterministic_overlay(source_image,temp/f"overlay_{i:04d}.png",shot.labels,cta=(i==len(ordered_shots)))
         if clip.exists() and clip.stat().st_mtime >= source_image.stat().st_mtime:
             check = subprocess.run(["ffprobe","-v","error","-show_entries","format=duration","-of","default=nw=1:nk=1",str(clip)],capture_output=True,text=True)
             if check.returncode == 0 and abs(float(check.stdout.strip()) - frames/30) < .12:
