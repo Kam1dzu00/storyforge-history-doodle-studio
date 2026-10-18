@@ -1,0 +1,12 @@
+{
+  "style_id": "clean_editorial",
+  "display_name": "Clean Editorial",
+  "description": "Mature hand-drawn editorial documentary style for comfortable long-form viewing: one focal idea, restrained palette, soft depth and minimal clutter.",
+  "visual_identity": ["clean dark-ink linework with varied weight", "soft cel shading", "subtle paper and gouache texture", "adult proportions", "restrained documentary mood"],
+  "composition_rules": ["one dominant focal point", "70 percent calm base, 20 percent secondary, 10 percent accent", "off-center subject", "generous negative space", "one visual idea per frame"],
+  "camera_rules": ["restrained documentary framing", "profiles silhouettes and object hero shots", "clear depth only when useful", "avoid repeated centered medium shots"],
+  "background_rules": ["warm cream muted navy dusty blue charcoal warm brown or muted olive", "soft atmospheric depth", "minimal historically relevant detail", "no generated typography"],
+  "positive_prompt_keywords": ["mature editorial documentary illustration", "clean ink linework", "soft cel shading", "paper gouache texture", "restrained 70 20 10 palette", "adult historical readability", "single clear focal point"],
+  "negative_prompt_keywords": ["children's illustration", "childlike clip-art", "school infographic", "glossy vector", "glossy 3D", "Pixar", "anime", "comic overload", "photorealism", "hyper-saturated", "crowded labels", "arrows", "pseudo-text", "gibberish", "watermark"],
+  "full_bleed_required": true
+}

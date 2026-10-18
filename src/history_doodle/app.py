@@ -54,7 +54,7 @@ class Window(QMainWindow):
         voice_preview=QPushButton("▶ Preview"); voice_preview.setObjectName("quiet"); voice_preview.clicked.connect(self.preview_voice)
         voice_row=QHBoxLayout(); voice_row.addWidget(self.voice); voice_row.addWidget(voice_preview)
         self.music=QLineEdit(); self.music.setPlaceholderText("Необязательно — оставьте пустым для процедурной музыки"); music_btn=QPushButton("Выбрать"); music_btn.setObjectName("quiet"); music_btn.clicked.connect(self.choose_music); row=QHBoxLayout(); row.addWidget(self.music); row.addWidget(music_btn)
-        self.music_profile=QComboBox(); self.music_profile.addItem("Historical Ambience","HISTORICAL_AMBIENCE"); self.music_profile.addItem("Bright Facts","BRIGHT_FACTS")
+        self.music_profile=QComboBox(); self.music_profile.addItem("Historical Ambience","HISTORICAL_AMBIENCE"); self.music_profile.addItem("Bright Facts","BRIGHT_FACTS"); self.music_profile.addItem("Cold War Underwater Editorial","COLD_WAR_UNDERWATER_EDITORIAL")
         self.workflow_mode=QComboBox(); self.workflow_mode.addItem("Guided","guided"); self.workflow_mode.addItem("Advanced","advanced"); self.workflow_mode.currentIndexChanged.connect(self.update_workflow_mode)
         self.auto_rebuild=QCheckBox("Автоматически обновлять видео после одобрения"); self.auto_rebuild.setChecked(True)
         self.style_mode=QComboBox()

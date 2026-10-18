@@ -1,0 +1,20 @@
+{
+  "style_id": "calm_animated_editorial_2d",
+  "display_name": "Calm Animated Editorial 2D",
+  "description": "A unified adult editorial documentary language for StoryForge plates and selective 2D motion overlays.",
+  "visual_identity": ["restrained hand-drawn editorial linework", "soft cel shading", "mild paper-gouache grain", "adult proportions", "authored object-level motion"],
+  "composition_rules": ["one dominant focal point", "maximum three supporting ideas", "readable in three seconds", "wide medium close detail rhythm", "environment remains visible"],
+  "camera_rules": ["gentle motivated pan", "restrained push", "layered parallax", "hold strong compositions", "never substitute repeated zooms for animation"],
+  "background_rules": ["warm sand and faded cream", "desaturated ocean blue and charcoal", "weathered wood", "storm cyan and ember orange only as narrative accents", "subtle paper texture"],
+  "positive_prompt_keywords": ["adult editorial historical documentary", "clean 2D shapes", "restrained ink line weight", "soft shadows", "mild paper texture", "readable silhouettes", "calm cinematic composition"],
+  "negative_prompt_keywords": ["children's explainer", "clip-art", "SaaS deck", "product cards", "dashboard", "corporate icon grid", "glossy vector", "glossy 3D", "photorealism", "pseudo-text", "watermark", "anatomy error"],
+  "palette": {"sand": "#D7BE8A", "cream": "#EDE3CA", "wood": "#806246", "ocean": "#42677A", "charcoal": "#232B2E", "storm_cyan": "#6D9BA3", "ember_orange": "#D36F3D", "warning_red": "#A83F38"},
+  "typography": {"family": "Arial", "weight": "700", "case": "uppercase only for deterministic question beats"},
+  "line_weight_px": [2.0, 4.0, 7.0],
+  "shape_language": ["soft geometric silhouettes", "irregular hand-drawn contours", "rounded joins", "no floating cards"],
+  "background_texture": "subtle monochrome paper grain at low opacity",
+  "character_proportions": "adult, restrained, profile/back/silhouette preferred",
+  "shadow_softness": "broad soft charcoal shadows at low opacity",
+  "transition_rhythm": "mostly motivated cuts, occasional 160ms dissolve, chapter transitions up to 500ms",
+  "full_bleed_required": true
+}

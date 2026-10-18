@@ -1,0 +1,71 @@
+{
+  "benchmark": "WW1_TRENCH_60S",
+  "status": "NOT_RUN",
+  "user_artistic_winner": null,
+  "engines": {
+    "A": {
+      "engine": "Blender Grease Pencil",
+      "status": "NOT_RUN",
+      "native_file": null,
+      "mp4": null,
+      "native_render_minutes": null,
+      "audio_composite_minutes": null,
+      "peak_ram_gb": null,
+      "human_prep_minutes": null,
+      "rigging_minutes": null,
+      "motion_quality_10": null,
+      "character_quality_10": null,
+      "repeatability_10": null,
+      "blocker": null,
+      "measured_on_host": false
+    },
+    "B": {
+      "engine": "Synfig Studio",
+      "status": "NOT_RUN",
+      "native_file": null,
+      "mp4": null,
+      "native_render_minutes": null,
+      "audio_composite_minutes": null,
+      "peak_ram_gb": null,
+      "human_prep_minutes": null,
+      "rigging_minutes": null,
+      "motion_quality_10": null,
+      "character_quality_10": null,
+      "repeatability_10": null,
+      "blocker": null,
+      "measured_on_host": false
+    },
+    "C": {
+      "engine": "Tahoma2D",
+      "status": "NOT_RUN",
+      "native_file": null,
+      "mp4": null,
+      "native_render_minutes": null,
+      "audio_composite_minutes": null,
+      "peak_ram_gb": null,
+      "human_prep_minutes": null,
+      "rigging_minutes": null,
+      "motion_quality_10": null,
+      "character_quality_10": null,
+      "repeatability_10": null,
+      "blocker": null,
+      "measured_on_host": false
+    },
+    "D": {
+      "engine": "OpenToonz",
+      "status": "NOT_RUN",
+      "native_file": null,
+      "mp4": null,
+      "native_render_minutes": null,
+      "audio_composite_minutes": null,
+      "peak_ram_gb": null,
+      "human_prep_minutes": null,
+      "rigging_minutes": null,
+      "motion_quality_10": null,
+      "character_quality_10": null,
+      "repeatability_10": null,
+      "blocker": null,
+      "measured_on_host": false
+    }
+  }
+}

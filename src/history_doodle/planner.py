@@ -5,7 +5,7 @@ from difflib import SequenceMatcher
 from pathlib import Path
 from pydantic import ValidationError
 from .config import LLM_REPO, NEGATIVE_PROMPT, STYLE_PROMPT
-from .schemas import CharacterCard, ProjectPlan, Scene, Shot, StorySection
+from .schemas import CharacterCard, ProjectPlan, QuestionBeat, Scene, Shot, StorySection
 from .util import cleanup_models, json_from_model_text, shot_seed
 
 log = logging.getLogger(__name__)
@@ -14,6 +14,40 @@ def target_words(seconds: int, wpm: int = 158) -> int:
     return round(seconds * wpm / 60)
 
 TAG_RE = re.compile(r"^\s*\[(VISUAL|CHARACTER|OBJECTS|LABELS|BACKGROUND|COMPOSITION|PLACEMENT|ANGLE|FOREGROUND|ACTION)\s*:\s*([^]]+)\]\s*$|^\s*\[(NO PEOPLE)\]\s*$", re.I)
+QUESTION_RE = re.compile(r"\[QUESTION_BEAT\]\s*(.*?)\s*\[/QUESTION_BEAT\]", re.I | re.S)
+STANDALONE_QUESTION_RE = re.compile(r"(?im)^\s*\[QUESTION_BEAT\]\s*$\n+((?:(?!\n\s*\n|\n\s*\[PAUSE_AFTER)[\s\S])+)")
+PRODUCTION_ONLY_TAG_RE = re.compile(r"(?im)^\s*\[(?:VOICE_MOOD|PAUSE_AFTER)\s*:[^]]+\]\s*$\n?")
+
+def parse_question_beats(script: str) -> tuple[str, list[str]]:
+    questions = [re.sub(r"\s+", " ", value).strip() for value in QUESTION_RE.findall(script)]
+    spoken = QUESTION_RE.sub(lambda match: match.group(1).strip(), script)
+    standalone: list[str] = []
+    def keep_question(match: re.Match) -> str:
+        value = match.group(1).strip()
+        standalone.append(re.sub(r"\s+", " ", value))
+        return value
+    spoken = STANDALONE_QUESTION_RE.sub(keep_question, spoken)
+    return spoken, questions + standalone
+
+def apply_question_beats(plan: ProjectPlan, questions: list[str]) -> ProjectPlan:
+    for question in questions:
+        normalized = " ".join(question.split()).lower()
+        candidate = next((shot for shot in sorted(plan.shots, key=lambda item: item.order)
+                          if normalized in " ".join(shot.narration_context.split()).lower()), None)
+        if candidate is None:
+            raise ValueError(f"QUESTION_BEAT narration was not preserved in the plan: {question}")
+        candidate.question_beat = QuestionBeat(
+            question_text=question,
+            background_visual=candidate.visual_focus or candidate.visual_subject,
+        )
+        candidate.labels = [question]
+        candidate.people_count = 0
+        candidate.character_ids = []
+        candidate.visual_type = "SILHOUETTE"
+        candidate.visual_category = "question_beat"
+        candidate.visual_focus = "restrained minimal symbolic background: " + (candidate.visual_focus or candidate.visual_subject)
+        candidate.routing_source = "manual"
+    return plan
 VISUAL_ALIASES={"CHARACTER":"CHARACTER_MEDIUM","CLOSEUP":"CHARACTER_CLOSEUP","OBJECT":"OBJECT_HERO","OBJECT_COLLECTION":"OBJECT_COLLECTION","DETAIL":"DETAIL","ENVIRONMENT":"ENVIRONMENT","INFO":"INFO_CARD","MAP":"MAP","COMPARISON":"COMPARISON"}
 PLACEMENT_ALIASES={"LEFT":"LEFT_THIRD","RIGHT":"RIGHT_THIRD","LOWER_LEFT":"LOWER_LEFT","LOWER_RIGHT":"LOWER_RIGHT","FOREGROUND_LEFT":"FOREGROUND_LEFT","FOREGROUND_RIGHT":"FOREGROUND_RIGHT","SMALL_IN_ENVIRONMENT":"SMALL_IN_ENVIRONMENT","LEFT_THIRD":"LEFT_THIRD","RIGHT_THIRD":"RIGHT_THIRD","CENTER":"CENTERED_CHARACTER"}
 ANGLE_ALIASES={"PROFILE":"PROFILE","THREE_QUARTER":"THREE_QUARTER","TOP_DOWN":"TOP_DOWN_OBJECT","OVER_SHOULDER":"OVER_SHOULDER","EYE_LEVEL":"EYE_LEVEL","SLIGHT_LOW":"SLIGHT_LOW","SLIGHT_HIGH":"SLIGHT_HIGH"}
@@ -38,7 +72,8 @@ def parse_director_tags(script: str) -> tuple[str,list[dict]]:
     return "\n".join(spoken).strip(),overrides
 
 def strip_director_tags(script: str) -> str:
-    return parse_director_tags(script)[0]
+    spoken = PRODUCTION_ONLY_TAG_RE.sub("", parse_question_beats(script)[0])
+    return parse_director_tags(spoken)[0]
 
 def extract_production_script(script: str) -> str:
     """Keep narration and director tags, discard production metadata/headings."""
@@ -272,6 +307,7 @@ class LocalPlanner:
 
     def plan(self, script: str, duration: int, base_seed: int) -> ProjectPlan:
         script = extract_production_script(script)
+        script, question_beats = parse_question_beats(script)
         script, director_overrides = parse_director_tags(script)
         style = STYLE_PROMPT.read_text().strip(); negative = NEGATIVE_PROMPT.read_text().strip()
         expected = max(5, round(duration / 6.7))
@@ -293,7 +329,7 @@ Use this locked style at the beginning of every prompt:\n{style}\nUse this negat
                 plan = normalize_shot_counts(plan, duration)
                 plan = apply_visual_grammar(plan, director_overrides)
                 plan = apply_composition_engine(plan, director_overrides)
-                return finalize_plan_prompts(plan, base_seed, style, negative)
+                return apply_question_beats(finalize_plan_prompts(plan, base_seed, style, negative), question_beats)
             except (ValueError, ValidationError) as exc:
                 error = str(exc)
                 if attempt == 2 or (duration >= 300 and attempt == 0): break
@@ -303,7 +339,7 @@ Use this locked style at the beginning of every prompt:\n{style}\nUse this negat
         plan = normalize_shot_counts(plan, duration)
         plan = apply_visual_grammar(plan, director_overrides)
         plan = apply_composition_engine(plan, director_overrides)
-        return finalize_plan_prompts(plan, base_seed, style, negative)
+        return apply_question_beats(finalize_plan_prompts(plan, base_seed, style, negative), question_beats)
 
 def _deterministic_fallback(script: str, duration: int) -> ProjectPlan:
     protected = re.sub(r"\b([ap])\.m\.", lambda m: f"{m.group(1)}<DOT>m<DOT>", script, flags=re.I)

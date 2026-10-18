@@ -43,7 +43,7 @@ def test_legacy_state_loads_and_preserves_unknown_fields():
 
 def test_registry_lists_profiles_and_rejects_unknown_style():
     ids = {item["style_id"] for item in StyleRegistry().list_styles()}
-    assert {LEGACY_STYLE_ID, "bright_explainer", "bright_explainer_host"} <= ids
+    assert {LEGACY_STYLE_ID, "bright_explainer", "bright_explainer_host", "clean_editorial"} <= ids
     with pytest.raises(RegistryError, match="Unknown style ID"):
         StyleRegistry().get("does_not_exist")
 
@@ -91,6 +91,15 @@ def test_bright_explainer_v3_enforces_show_energy_and_absolute_text_ban():
     assert "ABSOLUTE TEXT BAN" in prompt
     assert "finished adult animated-show frame" in prompt
     assert all(word in negative for word in ("pseudo-language", "watermark", "debug text", "gibberish"))
+
+def test_clean_editorial_is_separate_and_enforces_long_form_comfort():
+    state = bright_state(style_mode="clean_editorial", host_enabled=False)
+    item = shot("A submarine waits below the surface.", visual_category="environment_wide", visual_focus="one small submarine silhouette", people_count=0)
+    prompt, negative, refs = PromptComposer().compose(state, item)
+    assert refs == []
+    assert "CLEAN EDITORIAL DISCIPLINE" in prompt
+    assert "one dominant focal point" in prompt
+    assert "childish illustration" in negative and "pseudo-text" in negative
 
 
 def test_host_prompt_resolves_profile_without_claiming_backend_conditioning():

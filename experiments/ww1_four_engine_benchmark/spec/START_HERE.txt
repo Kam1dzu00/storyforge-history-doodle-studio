@@ -1,0 +1,8 @@
+STORYFORGE FOUR-ENGINE WW1 BENCHMARK — CODEX PACKAGE
+
+1. Unzip anywhere (ideally the StoryForge workspace or a NEW experiments subdirectory).
+2. Give Codex this instruction verbatim:
+   "Open CODEX_MASTER_PROMPT.md and CODEX_EXECUTION_README.md inside this package. Execute all feasible steps. Treat MASTER_STORYBOARD.json and FRAME_BY_FRAME_1800.jsonl as the timing source of truth. Do not fake native engines, logs, videos, or measurement results. Save all native projects, real renders and QA evidence in a NEW StoryForge experiment folder. Ask for the user's artistic selection before changing the main engine."
+3. Run: python3 validate_pack.py
+4. Expect 60 seconds total, NOT 15 seconds: 1800 frames per completed variant.
+5. This download includes specifications and machine-readable per-frame instructions, NOT generated videos.

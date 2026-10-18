@@ -1,7 +1,7 @@
 from pathlib import Path
 import json
 import pytest
-from history_doodle.planner import target_words, finalize_plan_prompts, normalize_shot_counts, parse_director_tags, apply_visual_grammar, apply_composition_engine, extract_production_script
+from history_doodle.planner import target_words, finalize_plan_prompts, normalize_shot_counts, parse_director_tags, parse_question_beats, apply_question_beats, apply_visual_grammar, apply_composition_engine, extract_production_script, strip_director_tags
 from history_doodle.render import ffmpeg_available, render
 from history_doodle.schemas import CharacterCard, ProjectPlan, Scene, Shot, StorySection, WordStamp
 from history_doodle.storage import ProjectStore
@@ -38,6 +38,31 @@ def sample_plan(nshots=2):
     return ProjectPlan(sections=[StorySection(id="sec_1",title="A",purpose="B",scene_ids=["scene_1"])],scenes=[Scene(id="scene_1",section_id="sec_1",order=1,narration_text="one two three four",shot_ids=[s.id for s in shots])],shots=shots)
 
 def test_manifest_validation(): assert ProjectPlan.model_validate(sample_plan().model_dump())
+
+def test_question_beat_metadata_roundtrip_and_exact_text():
+    script="Before.\n[QUESTION_BEAT]\nWhat happened below?\n[/QUESTION_BEAT]\nAfter."
+    spoken,questions=parse_question_beats(script)
+    assert "[QUESTION_BEAT]" not in spoken and questions==["What happened below?"]
+    plan=sample_plan(1); plan.shots[0].narration_context="What happened below?"
+    out=apply_question_beats(plan,questions)
+    restored=ProjectPlan.model_validate(out.model_dump())
+    beat=restored.shots[0].question_beat
+    assert beat and beat.question_text=="What happened below?" and restored.shots[0].labels==["What happened below?"]
+    assert beat.question_speed==pytest.approx(.86) and beat.music_duck_db==pytest.approx(8)
+
+def test_standalone_question_and_voice_tags_are_not_spoken():
+    script="""[VOICE_MOOD: STORY]
+Before.
+
+[QUESTION_BEAT]
+HOW DO YOU SURVIVE?
+
+[PAUSE_AFTER: 900ms]
+After."""
+    spoken,questions=parse_question_beats(script)
+    assert questions==["HOW DO YOU SURVIVE?"]
+    assert "HOW DO YOU SURVIVE?" in spoken
+    assert strip_director_tags(script)=="Before.\nHOW DO YOU SURVIVE?\nAfter."
 def test_word_target(): assert target_words(600)==1580
 def test_invalid_json_schema():
     data=sample_plan().model_dump(); data["scenes"][0]["shot_ids"]=["missing"]

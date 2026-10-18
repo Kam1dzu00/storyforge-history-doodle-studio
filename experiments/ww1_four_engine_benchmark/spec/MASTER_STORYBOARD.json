@@ -1,0 +1,654 @@
+{
+  "project": "STORYFORGE WW1 four-engine benchmark",
+  "title": "A Day in a WW1 Trench Was Worse Than You Think",
+  "fps": 30,
+  "width": 1080,
+  "height": 1920,
+  "duration_seconds": 60,
+  "frame_count": 1800,
+  "frame_indexing": "zero-based 0..1799; interval [start,end)",
+  "style": "premium 2D bold ink contours, coherent hand-crafted shapes, earthy blue/olive/brown with restrained ember orange; no photorealism",
+  "hardware": "MacBook Pro M1 Pro 16GB",
+  "engines": [
+    {
+      "id": "A",
+      "name": "Blender Grease Pencil",
+      "output": "A_BLENDER_GP_WW1_TRENCH_60S.mp4"
+    },
+    {
+      "id": "B",
+      "name": "Synfig Studio",
+      "output": "B_SYNFIG_WW1_TRENCH_60S.mp4"
+    },
+    {
+      "id": "C",
+      "name": "Tahoma2D",
+      "output": "C_TAHOMA_WW1_TRENCH_60S.mp4"
+    },
+    {
+      "id": "D",
+      "name": "OpenToonz",
+      "output": "D_OPENTOONZ_WW1_TRENCH_60S.mp4"
+    }
+  ],
+  "scenes": [
+    {
+      "id": "S01",
+      "name": "HOOK",
+      "start": 0,
+      "end": 5,
+      "camera": "close-up eye level",
+      "environment": "wet trench behind soldier; orange fire glow and smoke",
+      "acting": "soldier breathing, eyes dart to orange flash, shallow fearful swallow",
+      "voiceover": "A day in a World War One trench was hell.",
+      "beats": [
+        {
+          "t": 0,
+          "event": "instant dramatic face reveal"
+        },
+        {
+          "t": 0.5,
+          "event": "eyes glance off-camera left"
+        },
+        {
+          "t": 1.1,
+          "event": "fire glow pulses behind shoulder"
+        },
+        {
+          "t": 1.65,
+          "event": "one incomplete blink, eyelids close and open"
+        },
+        {
+          "t": 2.3,
+          "event": "head shifts right 7 degrees, shoulders hunch"
+        },
+        {
+          "t": 3.2,
+          "event": "thin smoke crosses midground, not face"
+        },
+        {
+          "t": 4.1,
+          "event": "eyes settle directly toward viewer"
+        },
+        {
+          "t": 4.8,
+          "event": "hard motivated cut to muddy boots"
+        }
+      ]
+    },
+    {
+      "id": "S02",
+      "name": "WATER_MUD",
+      "start": 5,
+      "end": 10,
+      "camera": "medium-to-low insert",
+      "environment": "muddy duckboards, pools, wet sandbags",
+      "acting": "foot peels from suction mud, water ripples, visible cold shiver",
+      "voiceover": "Men stood for hours in freezing water and thick mud.",
+      "beats": [
+        {
+          "t": 5,
+          "event": "low frame shows both boots immersed to ankles"
+        },
+        {
+          "t": 5.5,
+          "event": "rain drip hits puddle foreground"
+        },
+        {
+          "t": 6.1,
+          "event": "right boot tries to lift and resists sticky mud"
+        },
+        {
+          "t": 6.8,
+          "event": "boot comes free; stretched mud line breaks"
+        },
+        {
+          "t": 7.4,
+          "event": "boot splashes down causing concentric ripples"
+        },
+        {
+          "t": 8.0,
+          "event": "cut to medium shot hunched body; hands rub forearms"
+        },
+        {
+          "t": 8.6,
+          "event": "shoulder shiver travels through coat"
+        },
+        {
+          "t": 9.3,
+          "event": "soldier looks down in disgust"
+        },
+        {
+          "t": 9.85,
+          "event": "cut on his gaze to dark boards"
+        }
+      ]
+    },
+    {
+      "id": "S03",
+      "name": "RATS",
+      "start": 10,
+      "end": 15,
+      "camera": "low angled tracking to medium",
+      "environment": "night-blue trench duckboards, damp wood",
+      "acting": "rat scamper crosses foreground; soldier startles and grabs helmet",
+      "voiceover": "Rats scurried between your boots. Even sleep was a gamble.",
+      "beats": [
+        {
+          "t": 10,
+          "event": "rat nose appears behind left board"
+        },
+        {
+          "t": 10.4,
+          "event": "rat emerges; tail drags near shallow puddle"
+        },
+        {
+          "t": 10.8,
+          "event": "rat accelerates across board seams"
+        },
+        {
+          "t": 11.35,
+          "event": "soldier boot enters background of low shot"
+        },
+        {
+          "t": 11.6,
+          "event": "rat crosses directly ahead of boot"
+        },
+        {
+          "t": 11.9,
+          "event": "whip cut to soldier reaction medium shot"
+        },
+        {
+          "t": 12.05,
+          "event": "eyes widen and shoulders rise in anticipation"
+        },
+        {
+          "t": 12.25,
+          "event": "soldier hops sideways one step, weight shifts"
+        },
+        {
+          "t": 12.45,
+          "event": "helmet lifts slightly from forehead, rim rotates"
+        },
+        {
+          "t": 12.7,
+          "event": "left hand clamps helmet before it falls"
+        },
+        {
+          "t": 13.3,
+          "event": "rat exits under plank in background"
+        },
+        {
+          "t": 14.1,
+          "event": "soldier glares at rat exit, chest still racing"
+        },
+        {
+          "t": 14.85,
+          "event": "cut to food cup"
+        }
+      ]
+    },
+    {
+      "id": "S04",
+      "name": "FOOD",
+      "start": 15,
+      "end": 22,
+      "camera": "medium close-up to cup insert",
+      "environment": "overcast trench alcove and muted smoke",
+      "acting": "hand lifts tin mug, nose wrinkles, soldier grimaces, steam coils",
+      "voiceover": "Meals arrived cold, stale, or covered in mud. Bon appétit.",
+      "beats": [
+        {
+          "t": 15,
+          "event": "tin mug sits in hand below chest, steam rises"
+        },
+        {
+          "t": 15.5,
+          "event": "soldier flexes wrist and starts raising cup"
+        },
+        {
+          "t": 16.2,
+          "event": "cup reaches under nose; shoulders tilt forward"
+        },
+        {
+          "t": 17,
+          "event": "eyebrows raise in uncertain curiosity"
+        },
+        {
+          "t": 17.6,
+          "event": "short sniff; nostrils narrow; hand hesitates"
+        },
+        {
+          "t": 18.15,
+          "event": "smell registers, eyes narrow"
+        },
+        {
+          "t": 18.6,
+          "event": "mouth twists into disgust and upper lip rises"
+        },
+        {
+          "t": 19.3,
+          "event": "cup retreats slowly from face"
+        },
+        {
+          "t": 20,
+          "event": "tiny comic beat: soldier studies lumpy contents"
+        },
+        {
+          "t": 20.6,
+          "event": "one exhausted eye roll, hold 0.4 seconds"
+        },
+        {
+          "t": 21.25,
+          "event": "steam curls toward camera"
+        },
+        {
+          "t": 21.85,
+          "event": "sound bridge to distant artillery"
+        }
+      ]
+    },
+    {
+      "id": "S05",
+      "name": "SHELLING",
+      "start": 22,
+      "end": 30,
+      "camera": "medium-to-wide dynamic staged shot",
+      "environment": "sandbags, trench wall, visible skyline smoke",
+      "acting": "soldier ducks with clear anticipation/impact/follow through; shell blast beyond trench",
+      "voiceover": "Then without warning, shells could turn everything upside down.",
+      "beats": [
+        {
+          "t": 22,
+          "event": "silence of brief anticipation, soldier stops chewing"
+        },
+        {
+          "t": 22.6,
+          "event": "distant whistling begins and face tightens"
+        },
+        {
+          "t": 23.35,
+          "event": "soldier turns ear toward offscreen right"
+        },
+        {
+          "t": 23.85,
+          "event": "arms begin to rise protectively"
+        },
+        {
+          "t": 24.25,
+          "event": "orange-white flash behind parapet, 2 frames maximum"
+        },
+        {
+          "t": 24.4,
+          "event": "soldier folds down into cover with knees and hips"
+        },
+        {
+          "t": 24.65,
+          "event": "debris arc enters from behind, never fills entire frame"
+        },
+        {
+          "t": 25.1,
+          "event": "camera shake 5 frames, restrained"
+        },
+        {
+          "t": 25.5,
+          "event": "rolling smoke occludes upper trench wall"
+        },
+        {
+          "t": 26.2,
+          "event": "dust falls vertically in foreground"
+        },
+        {
+          "t": 27,
+          "event": "soldier crouches holding helmet"
+        },
+        {
+          "t": 28,
+          "event": "slowly lifts only eyes above arms"
+        },
+        {
+          "t": 29,
+          "event": "falling debris fades, distant low rumble persists"
+        },
+        {
+          "t": 29.85,
+          "event": "hard audio cut to paper rustle"
+        }
+      ]
+    },
+    {
+      "id": "S06",
+      "name": "LETTER",
+      "start": 30,
+      "end": 38,
+      "camera": "seated medium close-up and hand insert",
+      "environment": "quiet sheltered trench, cold blue light",
+      "acting": "soldier unfolds handwritten letter; eyes soften; paper flutter",
+      "voiceover": "A letter from home might be the best moment of the week.",
+      "beats": [
+        {
+          "t": 30,
+          "event": "gloved hands take damp folded envelope"
+        },
+        {
+          "t": 30.8,
+          "event": "right thumb breaks fold carefully"
+        },
+        {
+          "t": 31.6,
+          "event": "unfold one panel of letter"
+        },
+        {
+          "t": 32.4,
+          "event": "cut to mid shot; soldier lowers head to read"
+        },
+        {
+          "t": 33.2,
+          "event": "pupil tracks first line left to right"
+        },
+        {
+          "t": 34,
+          "event": "mouth corners warm slightly, no exaggerated grin"
+        },
+        {
+          "t": 34.9,
+          "event": "draft catches lower corner of page"
+        },
+        {
+          "t": 35.5,
+          "event": "soldier pins fluttering corner gently"
+        },
+        {
+          "t": 36.4,
+          "event": "eyes blink and emotion fades into uncertainty"
+        },
+        {
+          "t": 37.1,
+          "event": "close-up on letter and knuckles"
+        },
+        {
+          "t": 37.85,
+          "event": "distant whistle starts transition"
+        }
+      ]
+    },
+    {
+      "id": "S07",
+      "name": "OVER_TOP",
+      "start": 38,
+      "end": 48,
+      "camera": "side silhouette with low-angle ladder",
+      "environment": "trench rim, ladder, smoke sky, distant wire",
+      "acting": "hesitation at ladder; hand grips rung; meaningful weighted ascent",
+      "voiceover": "And sometimes the order came: climb out into no man’s land.",
+      "beats": [
+        {
+          "t": 38,
+          "event": "soldier stands at ladder base, looking up"
+        },
+        {
+          "t": 39.15,
+          "event": "hand hesitates beside rung"
+        },
+        {
+          "t": 40,
+          "event": "fingers grip first rung, knuckles tense"
+        },
+        {
+          "t": 41,
+          "event": "one boot plants on first rung"
+        },
+        {
+          "t": 41.8,
+          "event": "body compresses down preparing push"
+        },
+        {
+          "t": 42.4,
+          "event": "weighted upward lift from planted foot"
+        },
+        {
+          "t": 43.25,
+          "event": "other hand reaches next rung"
+        },
+        {
+          "t": 44.2,
+          "event": "other boot searches and finds higher rung"
+        },
+        {
+          "t": 45,
+          "event": "head breaks trench skyline"
+        },
+        {
+          "t": 46,
+          "event": "torso reaches parapet; silhouette clear"
+        },
+        {
+          "t": 46.7,
+          "event": "small pause at edge as wind moves coat"
+        },
+        {
+          "t": 47.35,
+          "event": "soldier begins step into dangerous light"
+        },
+        {
+          "t": 47.9,
+          "event": "cut before showing violence"
+        }
+      ]
+    },
+    {
+      "id": "S08",
+      "name": "ENDING",
+      "start": 48,
+      "end": 60,
+      "camera": "intimate close-up with brief held silhouettes",
+      "environment": "minimal distant smoke and near-black slate gradient",
+      "acting": "hold on weary eyes and tiny motions; closing title lands, end with clean beat",
+      "voiceover": "And some men lived like this for years. If they survived.",
+      "beats": [
+        {
+          "t": 48,
+          "event": "cut to tight soldier face, wet smudges visible"
+        },
+        {
+          "t": 49,
+          "event": "eyes stare beyond frame into distance"
+        },
+        {
+          "t": 50.2,
+          "event": "barely perceptible controlled breath"
+        },
+        {
+          "t": 51.4,
+          "event": "distant ember dims behind him"
+        },
+        {
+          "t": 52.6,
+          "event": "small slow blink, single eyebrow tension"
+        },
+        {
+          "t": 54,
+          "event": "eyes drop toward ground; not a camera zoom substitute"
+        },
+        {
+          "t": 55,
+          "event": "eyes return halfway to viewer"
+        },
+        {
+          "t": 56.2,
+          "event": "on-screen final title completes word-by-word"
+        },
+        {
+          "t": 57.5,
+          "event": "sound bed thins; hold emotionally readable face"
+        },
+        {
+          "t": 58.3,
+          "event": "subtle cheek tremor / breath"
+        },
+        {
+          "t": 59.2,
+          "event": "last subtitle resolves; maintain scene image"
+        },
+        {
+          "t": 59.95,
+          "event": "clean end, no abrupt audio cut"
+        }
+      ]
+    }
+  ],
+  "shots": [
+    {
+      "id": "01A",
+      "start": 0,
+      "end": 2.3,
+      "framing": "MCU",
+      "acting": "soldier face; blink + eyes dart",
+      "fx": "fire flicker + drifting smoke"
+    },
+    {
+      "id": "01B",
+      "start": 2.3,
+      "end": 5,
+      "framing": "CU",
+      "acting": "head angle + expression decline",
+      "fx": "parallax trench wall, ash drift"
+    },
+    {
+      "id": "02A",
+      "start": 5,
+      "end": 8,
+      "framing": "LOW",
+      "acting": "boots pulled through mud; splash",
+      "fx": "puddle ripples + rain"
+    },
+    {
+      "id": "02B",
+      "start": 8,
+      "end": 10,
+      "framing": "MS",
+      "acting": "upper-body shiver and sigh",
+      "fx": "drops/air mist"
+    },
+    {
+      "id": "03A",
+      "start": 10,
+      "end": 11.9,
+      "framing": "LOW",
+      "acting": "rat runs on boards, leg in distance",
+      "fx": "wet board highlights"
+    },
+    {
+      "id": "03B",
+      "start": 11.9,
+      "end": 15,
+      "framing": "MS",
+      "acting": "hop, recoil, helmet catch and settle",
+      "fx": "secondary rat exit"
+    },
+    {
+      "id": "04A",
+      "start": 15,
+      "end": 18.6,
+      "framing": "MCU",
+      "acting": "mug moves to nose; sniff",
+      "fx": "steam cycles"
+    },
+    {
+      "id": "04B",
+      "start": 18.6,
+      "end": 22,
+      "framing": "MCU",
+      "acting": "grimace + pulls mug away",
+      "fx": "steam curls"
+    },
+    {
+      "id": "05A",
+      "start": 22,
+      "end": 24.25,
+      "framing": "MS",
+      "acting": "listens to whistle, braces",
+      "fx": "threat glow"
+    },
+    {
+      "id": "05B",
+      "start": 24.25,
+      "end": 26.2,
+      "framing": "MS",
+      "acting": "flash, real duck, recovery",
+      "fx": "blast smoke/debris"
+    },
+    {
+      "id": "05C",
+      "start": 26.2,
+      "end": 30,
+      "framing": "LOW MS",
+      "acting": "held duck then eye reveal",
+      "fx": "dust falls"
+    },
+    {
+      "id": "06A",
+      "start": 30,
+      "end": 32.4,
+      "framing": "INSERT",
+      "acting": "hands unfold paper",
+      "fx": "letter corners flutter"
+    },
+    {
+      "id": "06B",
+      "start": 32.4,
+      "end": 37.1,
+      "framing": "MCU",
+      "acting": "read, soften, then pause",
+      "fx": "coats/wind"
+    },
+    {
+      "id": "06C",
+      "start": 37.1,
+      "end": 38,
+      "framing": "INSERT",
+      "acting": "paper and clenched hand",
+      "fx": "paper flutter"
+    },
+    {
+      "id": "07A",
+      "start": 38,
+      "end": 42.4,
+      "framing": "MS SIDE",
+      "acting": "pause then grab ladder and place foot",
+      "fx": "fog silhouette"
+    },
+    {
+      "id": "07B",
+      "start": 42.4,
+      "end": 45,
+      "framing": "MS SIDE",
+      "acting": "alternate hands/feet weighted climb",
+      "fx": "coat follows body"
+    },
+    {
+      "id": "07C",
+      "start": 45,
+      "end": 48,
+      "framing": "WIDE SIL",
+      "acting": "silhouette clears lip and commits",
+      "fx": "smoke + flare"
+    },
+    {
+      "id": "08A",
+      "start": 48,
+      "end": 54,
+      "framing": "ECU",
+      "acting": "eyes breathing blink",
+      "fx": "background smoke"
+    },
+    {
+      "id": "08B",
+      "start": 54,
+      "end": 60,
+      "framing": "ECU",
+      "acting": "gaze returns, quiet emotional hold",
+      "fx": "embers diminish"
+    }
+  ]
+}

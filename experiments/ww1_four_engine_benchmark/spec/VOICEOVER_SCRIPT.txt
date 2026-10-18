@@ -1,0 +1,12 @@
+VOICEOVER (identical file shared by all four pipelines; record/synthesize ONCE):
+
+000.0–005.0  A day in a World War One trench was hell.
+005.0–010.0  Men stood for hours in freezing water and thick mud.
+010.0–015.0  Rats scurried between your boots. Even sleep was a gamble.
+015.0–022.0  Meals arrived cold, stale, or covered in mud. Bon appétit.
+022.0–030.0  Then without warning, shells could turn everything upside down.
+030.0–038.0  A letter from home might be the best moment of the week.
+038.0–048.0  And sometimes the order came: climb out into no man’s land.
+048.0–060.0  And some men lived like this for years. If they survived.
+
+Timing is provisional until actual narration is synthesized; generate word-level alignments from audio, not evenly spaced guesses.

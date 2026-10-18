@@ -185,6 +185,9 @@ class PromptComposer:
             prompt += "\nV3 SHOW ENERGY: Create a finished adult animated-show frame with one instantly readable visual beat, dramatic perspective, expressive acting or a world-grounded hero object, strong depth layers, cinematic warm/cool lighting, controlled motion accents, and no empty infographic staging."
             prompt += "\nABSOLUTE TEXT BAN: generate no readable or unreadable text of any kind: no letters, words, numbers, signs, captions, labels, bubbles, pseudo-language, gibberish, typography, watermark, UI, or debug marks. Leave clean composition space only when the deterministic renderer will add text later."
             negative += ", text, letters, words, numbers, captions, speech bubble, sign, label, pseudo-language, typography, watermark, UI text, debug text, gibberish"
+        if style["style_id"] == "clean_editorial":
+            prompt += "\nCLEAN EDITORIAL DISCIPLINE: one dominant focal point, calm 70/20/10 palette, mature hand-drawn editorial documentary linework, soft cel shading and subtle paper-gouache texture. Preserve generous negative space and long-form visual comfort. Never render final typography inside the generated image."
+            negative += ", childish illustration, school infographic, glossy vector art, glossy 3D, photorealism, anime, comic overload, hyper-saturation, crowded labels, arrows, pseudo-text, watermark"
         if style.get("full_bleed_required"): negative += ", " + ", ".join(FULL_BLEED_EXCLUSIONS)
         return prompt, negative, refs
 

@@ -1,0 +1,98 @@
+[
+  {
+    "beat": 1,
+    "start": 0.0,
+    "end": 5.0,
+    "slot_duration": 5.0,
+    "speech_duration": 3.285333,
+    "text": "A day in a World War One trench was hell.",
+    "file": "/Users/mihailfedrunov/Documents/Codex/HISTORY_DOODLE_STUDIO/experiments/ww1_four_engine_benchmark/shared/voice_segments/beat_01.wav",
+    "voice": "am_michael",
+    "speed": 0.82,
+    "lang": "en-us"
+  },
+  {
+    "beat": 2,
+    "start": 5.0,
+    "end": 10.0,
+    "slot_duration": 5.0,
+    "speech_duration": 3.904,
+    "text": "Men stood for hours in freezing water and thick mud.",
+    "file": "/Users/mihailfedrunov/Documents/Codex/HISTORY_DOODLE_STUDIO/experiments/ww1_four_engine_benchmark/shared/voice_segments/beat_02.wav",
+    "voice": "am_michael",
+    "speed": 0.82,
+    "lang": "en-us"
+  },
+  {
+    "beat": 3,
+    "start": 10.0,
+    "end": 15.0,
+    "slot_duration": 5.0,
+    "speech_duration": 4.522667,
+    "text": "Rats scurried between your boots. Even sleep was a gamble.",
+    "file": "/Users/mihailfedrunov/Documents/Codex/HISTORY_DOODLE_STUDIO/experiments/ww1_four_engine_benchmark/shared/voice_segments/beat_03.wav",
+    "voice": "am_michael",
+    "speed": 0.82,
+    "lang": "en-us"
+  },
+  {
+    "beat": 4,
+    "start": 15.0,
+    "end": 22.0,
+    "slot_duration": 7.0,
+    "speech_duration": 6.208,
+    "text": "Meals arrived cold, stale, or covered in mud. Bon app\u00e9tit.",
+    "file": "/Users/mihailfedrunov/Documents/Codex/HISTORY_DOODLE_STUDIO/experiments/ww1_four_engine_benchmark/shared/voice_segments/beat_04.wav",
+    "voice": "am_michael",
+    "speed": 0.76,
+    "lang": "en-us"
+  },
+  {
+    "beat": 5,
+    "start": 22.0,
+    "end": 30.0,
+    "slot_duration": 8.0,
+    "speech_duration": 5.482667,
+    "text": "Then without warning, shells could turn everything upside down.",
+    "file": "/Users/mihailfedrunov/Documents/Codex/HISTORY_DOODLE_STUDIO/experiments/ww1_four_engine_benchmark/shared/voice_segments/beat_05.wav",
+    "voice": "am_michael",
+    "speed": 0.76,
+    "lang": "en-us"
+  },
+  {
+    "beat": 6,
+    "start": 30.0,
+    "end": 38.0,
+    "slot_duration": 8.0,
+    "speech_duration": 4.736,
+    "text": "A letter from home might be the best moment of the week.",
+    "file": "/Users/mihailfedrunov/Documents/Codex/HISTORY_DOODLE_STUDIO/experiments/ww1_four_engine_benchmark/shared/voice_segments/beat_06.wav",
+    "voice": "am_michael",
+    "speed": 0.76,
+    "lang": "en-us"
+  },
+  {
+    "beat": 7,
+    "start": 38.0,
+    "end": 48.0,
+    "slot_duration": 10.0,
+    "speech_duration": 5.461333,
+    "text": "And sometimes the order came: climb out into no man's land.",
+    "file": "/Users/mihailfedrunov/Documents/Codex/HISTORY_DOODLE_STUDIO/experiments/ww1_four_engine_benchmark/shared/voice_segments/beat_07.wav",
+    "voice": "am_michael",
+    "speed": 0.76,
+    "lang": "en-us"
+  },
+  {
+    "beat": 8,
+    "start": 48.0,
+    "end": 60.0,
+    "slot_duration": 12.0,
+    "speech_duration": 5.013333,
+    "text": "And some men lived like this for years. If they survived.",
+    "file": "/Users/mihailfedrunov/Documents/Codex/HISTORY_DOODLE_STUDIO/experiments/ww1_four_engine_benchmark/shared/voice_segments/beat_08.wav",
+    "voice": "am_michael",
+    "speed": 0.76,
+    "lang": "en-us"
+  }
+]

@@ -19,9 +19,12 @@ def requires_host_conditioning(state, shot) -> bool:
 
 def generation_kwargs(state, shot, prompt: str, references: list[Path], attempt: int = 0) -> dict:
     vertical = state.output_height > state.output_width
+    premium_v2 = bool(shot.validation_checks.get("premium_v2"))
     kwargs = dict(
-        seed=shot.seed + attempt, prompt=prompt, num_inference_steps=4,
-        height=1024 if vertical else 576, width=576 if vertical else 1024, guidance=1.0,
+        seed=shot.seed + attempt, prompt=prompt,
+        num_inference_steps=8 if premium_v2 else 4,
+        height=1024 if vertical else 576, width=576 if vertical else 1024,
+        guidance=2.0 if premium_v2 else 1.0,
     )
     if references:
         kwargs["image_paths"] = [str(path) for path in references]
@@ -62,7 +65,7 @@ def generate(project: Path, only: str | None = None, new_seed: bool = False) -> 
         old_status, old_image_path, old_seed = shot.status, shot.image_path, shot.seed
         pending_version = None
         references = [STYLE_REFERENCE] if use_reference else []
-        if not legacy:
+        if not legacy and not shot.director_override:
             positive, negative, references = composer.compose(state, shot, require_references=True)
             shot.prompt, shot.negative_prompt = positive, negative
         digest = prompt_hash(shot.prompt, shot.negative_prompt)

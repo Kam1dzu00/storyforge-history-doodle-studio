@@ -1,10 +1,20 @@
 from pathlib import Path
-from PIL import Image
-from history_doodle.render import _motion_filter, _xfade_graph, probe, render
+from PIL import Image, ImageDraw
+from history_doodle.render import _font, _motion_filter, _wrap_text, _xfade_graph, probe, render
 from history_doodle.schemas import ProjectPlan, Scene, Shot, StorySection
 from history_doodle.subtitles import build
 from history_doodle.schemas import WordStamp
 from history_doodle.util import run
+
+
+def test_question_overlay_wraps_long_text_within_safe_width():
+    draw = ImageDraw.Draw(Image.new("RGB", (1024, 576)))
+    font = _font(63)
+    text = "Why would Moscow send submarines carrying nuclear weapons into a blockade the Americans were determined to enforce?"
+    wrapped = _wrap_text(draw, text, font, 778)
+    assert "\n" in wrapped
+    assert wrapped.replace("\n", " ") == text
+    assert all(draw.textbbox((0, 0), line, font=font, stroke_width=3)[2] <= 778 for line in wrapped.splitlines())
 
 def test_motion_is_subtle_and_pans_are_locked():
     assert "1.015" in _motion_filter("slow_zoom_in", 120)

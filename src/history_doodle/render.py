@@ -16,16 +16,41 @@ def _font(size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
     return ImageFont.load_default()
 
 
-def _deterministic_overlay(source: Path, output: Path, labels: list[str], cta: bool = False) -> Path:
+def _wrap_text(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.ImageFont, max_width: int) -> str:
+    """Wrap deterministic overlay copy without changing any spoken words."""
+    wrapped: list[str] = []
+    for paragraph in text.splitlines() or [text]:
+        words = paragraph.split()
+        if not words:
+            wrapped.append("")
+            continue
+        line = words[0]
+        for word in words[1:]:
+            candidate = f"{line} {word}"
+            if draw.textbbox((0, 0), candidate, font=font, stroke_width=3)[2] <= max_width:
+                line = candidate
+            else:
+                wrapped.append(line)
+                line = word
+        wrapped.append(line)
+    return "\n".join(wrapped)
+
+
+def _deterministic_overlay(source: Path, output: Path, labels: list[str], cta: bool = False, question: bool = False) -> Path:
     image=Image.open(source).convert("RGBA"); draw=ImageDraw.Draw(image,"RGBA")
-    text="\n".join(labels); max_width=int(image.width*.86); size=max(34,int(image.width*(.080 if cta else .073)))
+    raw_text="\n".join(labels); max_width=int(image.width*(.76 if question else .86)); size=max(34,int(image.width*(.062 if question else (.080 if cta else .073))))
     font=_font(size)
-    while draw.multiline_textbbox((0,0),text,font=font,spacing=8,align="center")[2] > max_width and size>24:
-        size-=2; font=_font(size)
-    box=draw.multiline_textbbox((0,0),text,font=font,spacing=8,align="center",stroke_width=3)
-    width,height=box[2]-box[0],box[3]-box[1]; x=(image.width-width)//2; y=int(image.height*(.58 if cta else .08))
-    pad=18; draw.rounded_rectangle((x-pad,y-pad,x+width+pad,y+height+pad),radius=18,fill=(8,15,28,196),outline=(255,201,55,235),width=4)
-    draw.multiline_text((x,y),text,font=font,fill=(255,255,255,255),stroke_width=3,stroke_fill=(5,10,20,255),spacing=8,align="center")
+    text=_wrap_text(draw,raw_text,font,max_width)
+    max_height=int(image.height*(.30 if question else .35))
+    spacing=12 if question else 8
+    while draw.multiline_textbbox((0,0),text,font=font,spacing=spacing,align="center",stroke_width=3)[3] > max_height and size>24:
+        size-=2; font=_font(size); text=_wrap_text(draw,raw_text,font,max_width)
+    box=draw.multiline_textbbox((0,0),text,font=font,spacing=spacing,align="center",stroke_width=3)
+    width,height=box[2]-box[0],box[3]-box[1]; x=(image.width-width)//2; y=(image.height-height)//2 if question else int(image.height*(.58 if cta else .08))
+    pad=28 if question else 18
+    fill=(7,14,24,150 if question else 196); outline=(0,0,0,0) if question else (255,201,55,235)
+    draw.rounded_rectangle((x-pad,y-pad,x+width+pad,y+height+pad),radius=18,fill=fill,outline=outline,width=0 if question else 4)
+    draw.multiline_text((x,y),text,font=font,fill=(246,238,218,255) if question else (255,255,255,255),stroke_width=2 if question else 3,stroke_fill=(5,10,20,210),spacing=spacing,align="center")
     output.parent.mkdir(parents=True,exist_ok=True); image.convert("RGB").save(output,quality=96); return output
 
 def ffmpeg_available() -> bool:
@@ -115,13 +140,14 @@ def render(project: Path, plan: ProjectPlan, narration: Path, ass: Path, music: 
         clip_duration = duration + (TRANSITION_SECONDS if has_dissolve_after else 0)
         frames = max(1, round(clip_duration*FPS)); clip = temp / f"clip_production_v3_{i:04d}.mp4"
         source_image=project/shot.image_path
-        if shot.labels:
-            source_image=_deterministic_overlay(source_image,temp/f"overlay_{i:04d}.png",shot.labels,cta=(i==len(ordered_shots)))
+        if shot.labels or shot.question_beat:
+            labels=[shot.question_beat.question_text] if shot.question_beat else shot.labels
+            source_image=_deterministic_overlay(source_image,temp/f"overlay_{i:04d}.png",labels,cta=(i==len(ordered_shots)),question=bool(shot.question_beat))
         if clip.exists() and clip.stat().st_mtime >= source_image.stat().st_mtime:
             check = subprocess.run(["ffprobe","-v","error","-show_entries","format=duration","-of","default=nw=1:nk=1",str(clip)],capture_output=True,text=True)
             if check.returncode == 0 and abs(float(check.stdout.strip()) - frames/30) < .12:
                 clips.append(clip); progress(i,len(plan.shots)); continue
-        run(["ffmpeg","-y","-loop","1","-i",str(project/shot.image_path),"-vf",_motion_filter(shot.camera_motion,frames,width,height),"-frames:v",str(frames),"-c:v","libx264","-preset","fast","-crf","18","-pix_fmt","yuv420p",str(clip)])
+        run(["ffmpeg","-y","-loop","1","-i",str(source_image),"-vf",_motion_filter(shot.camera_motion,frames,width,height),"-frames:v",str(frames),"-c:v","libx264","-preset","fast","-crf","18","-pix_fmt","yuv420p",str(clip)])
         clips.append(clip); progress(i, len(plan.shots))
     silent = temp / "video.mp4"; no_sub = project / "render/final_video_no_subtitles.mp4"; final = project / "render/final_video.mp4"
     if len(clips) == 1:

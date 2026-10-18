@@ -5,10 +5,39 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 Motion = Literal["slow_zoom_in", "slow_zoom_out", "pan_left", "pan_right", "subtle_push", "static"]
+EngineRoute = Literal["storyforge", "mimic_native_scene", "mimic_overlay", "mimic_micro_character", "auto"]
 VisualType = Literal["CHARACTER_WIDE", "CHARACTER_MEDIUM", "CHARACTER_CLOSEUP", "OBJECT_HERO", "OBJECT_COLLECTION", "DETAIL", "ENVIRONMENT", "INFO_CARD", "MAP", "COMPARISON", "SILHOUETTE", "GROUP"]
 SubjectPlacement = Literal["LEFT_THIRD","RIGHT_THIRD","LOWER_LEFT","LOWER_RIGHT","FOREGROUND_LEFT","FOREGROUND_RIGHT","SMALL_IN_ENVIRONMENT","OFF_CENTER","CENTERED_OBJECT","CENTERED_CHARACTER"]
 CameraAngle = Literal["EYE_LEVEL","SLIGHT_LOW","SLIGHT_HIGH","THREE_QUARTER","PROFILE","OVER_SHOULDER","TOP_DOWN_OBJECT","FRONTAL_OBJECT"]
 Framing = Literal["WIDE","MEDIUM_WIDE","MEDIUM","CLOSEUP","DETAIL","ENVIRONMENTAL_WIDE"]
+
+class QuestionBeat(BaseModel):
+    """Structured long-form retention beat with deterministic presentation."""
+    question_text: str = Field(min_length=1)
+    pause_before_ms: int = Field(default=850, ge=600, le=1200)
+    voice_mode: Literal["QUESTION"] = "QUESTION"
+    question_speed: float = Field(default=0.86, ge=0.84, le=0.90)
+    background_visual: str
+    question_card_min_ms: int = Field(default=5200, ge=3000, le=10000)
+    question_card_max_ms: int = Field(default=7600, ge=3000, le=12000)
+    pause_after_ms: int = Field(default=750, ge=600, le=1100)
+    music_duck_db: float = Field(default=8.0, ge=6.0, le=9.0)
+    text_animation: Literal["slow_fade_drift"] = "slow_fade_drift"
+
+    @model_validator(mode="after")
+    def valid_card_range(self):
+        if self.question_card_max_ms < self.question_card_min_ms:
+            raise ValueError("question_card_max_ms must be >= question_card_min_ms")
+        return self
+
+class MotionSemantics(BaseModel):
+    """A scoped, testable explanation of why a hybrid scene moves."""
+    moving_element: str = Field(min_length=1)
+    narrative_purpose: str = Field(min_length=1)
+    start_state: str = Field(min_length=1)
+    end_state: str = Field(min_length=1)
+    intensity: Literal["subtle", "moderate", "strong"] = "subtle"
+    alpha_required: bool = False
 
 class CharacterCard(BaseModel):
     id: str
@@ -71,6 +100,13 @@ class Shot(BaseModel):
     image_versions: list[dict] = Field(default_factory=list)
     approved: bool = False
     generated_at: str | None = None
+    question_beat: QuestionBeat | None = None
+    engine_route: EngineRoute = "storyforge"
+    motion_semantics: MotionSemantics | None = None
+    mimic_contract_id: str | None = None
+    base_plate_path: str | None = None
+    overlay_path: str | None = None
+    hybrid_status: Literal["not_applicable", "planned", "rendered", "approved", "rejected", "fallback"] = "not_applicable"
 
 class Scene(BaseModel):
     id: str
@@ -131,12 +167,13 @@ class ProjectState(BaseModel):
     shot_version_limit: int = Field(default=4, ge=1, le=10)
     voice_preset: Literal["energetic_explainer", "friendly_documentary", "calm_history"] = "calm_history"
     speech_speed: float = Field(default=1.03, ge=0.75, le=1.25)
-    music_profile: Literal["HISTORICAL_AMBIENCE", "BRIGHT_FACTS"] = "HISTORICAL_AMBIENCE"
+    music_profile: Literal["HISTORICAL_AMBIENCE", "BRIGHT_FACTS", "COLD_WAR_UNDERWATER_EDITORIAL"] = "HISTORICAL_AMBIENCE"
     background_music: str | None = None
     background_music_enabled: bool = False
     background_music_mode: Literal["user_file", "procedural"] = "procedural"
     background_music_gain_db: float = 0.0
     background_music_duck_db: float = 6.0
+    background_music_question_duck_db: float = 8.0
     background_music_fade_in: float = 2.0
     background_music_fade_out: float = 5.0
     outro_enabled: bool = False
@@ -152,6 +189,8 @@ class ProjectState(BaseModel):
     images_status: str = "pending"
     subtitles_status: str = "pending"
     render_status: str = "pending"
+    hybrid_enabled: bool = False
+    hybrid_style_profile: str | None = None
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     updated_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
